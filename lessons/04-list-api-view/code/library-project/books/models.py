@@ -10,7 +10,7 @@ class Book(models.Model):
     pages = models.IntegerField()
     cover_image = models.URLField(blank=True, null=True)
     language = models.CharField(max_length=30)
-    price = models.DecimalField(max_digits=6, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
         return f"{self.title} by {self.author}"
