@@ -348,4 +348,4 @@ Agar savol bo'lsa:
 
 **Tayyor bo'lsangiz, `postman-guide.md`'ni oching va boshlang!** 🚀
 
-Happy learning! 🎓
+Happy learning! 
