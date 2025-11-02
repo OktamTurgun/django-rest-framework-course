@@ -251,6 +251,135 @@ Amaliy qismni keyingi qadamlarda amalga oshiramiz!
 - Loyiha talab etganida ikkalasini birga ishlating
 
 ---
+---
+
+## 7. Code qismi - Amaliy implementatsiya
+
+### Loyiha strukturasi
+```
+10-serializers/code/library-project/
+├── books/
+│   ├── serializers.py  # 4 xil serializer
+│   ├── views.py        # APIView'lar
+│   └── urls.py         # Endpoint'lar
+```
+
+### 🔧 Qo'shilgan serializer'lar
+
+#### 1. BookSerializer (Oddiy Serializer)
+```python
+class BookSerializer(serializers.Serializer):
+    # Barcha fieldlar qo'lda yozilgan
+    # create() va update() qo'lda
+    # Custom validation
+```
+
+#### 2. BookModelSerializer
+```python
+class BookModelSerializer(serializers.ModelSerializer):
+    days_since_published = serializers.SerializerMethodField()
+    # Avtomatik create/update
+```
+
+#### 3. BookListSerializer
+```python
+# Faqat [id, title, author, price]
+# List view uchun yengil
+```
+
+#### 4. BookDetailSerializer
+```python
+# Barcha fieldlar + computed fields:
+# - days_since_published
+# - is_new
+# - discount_price
+```
+
+### 🌐 Endpoint'lar
+
+| Method | URL | Serializer | Tavsif |
+|--------|-----|-----------|---------|
+| GET | `/api/books/` | BookSerializer | Barcha kitoblar (oddiy) |
+| POST | `/api/books/` | BookSerializer | Yangi kitob yaratish |
+| GET | `/api/books/<pk>/` | BookSerializer | Bitta kitob |
+| PUT/PATCH | `/api/books/<pk>/` | BookSerializer | Yangilash |
+| DELETE | `/api/books/<pk>/` | BookSerializer | O'chirish |
+| GET | `/api/books-model/` | BookListSerializer | Barcha kitoblar (model) |
+| POST | `/api/books-model/` | BookModelSerializer | Yangi kitob yaratish |
+| GET | `/api/books-model/<pk>/` | BookDetailSerializer | Bitta kitob (to'liq) |
+| PUT/PATCH | `/api/books-model/<pk>/` | BookModelSerializer | Yangilash |
+| DELETE | `/api/books-model/<pk>/` | BookModelSerializer | O'chirish |
+
+### 🧪 Test qilish
+```bash
+# 1. Serverni ishga tushiring
+cd code/library-project
+pipenv shell
+python manage.py runserver
+
+# 2. Postman yoki Swagger'da test qiling
+http://127.0.0.1:8000/swagger/
+
+# 3. Oddiy Serializer
+GET http://127.0.0.1:8000/api/books/
+
+# 4. ModelSerializer
+GET http://127.0.0.1:8000/api/books-model/
+```
+
+### 📊 Farqlarni ko'rish
+
+**Oddiy Serializer response:**
+```json
+{
+  "message": "Oddiy Serializer ishlatildi",
+  "count": 5,
+  "results": [...]
+}
+```
+
+**ModelSerializer response (detail):**
+```json
+{
+  "message": "ModelSerializer (Detail) ishlatildi",
+  "data": {
+    "id": 1,
+    "title": "Clean Code",
+    "days_since_published": 6300,
+    "is_new": false,
+    "discount_price": 41.39,
+    ...
+  }
+}
+```
+
+### ✅ Validation misollari
+
+**1. Narx validatsiyasi:**
+```json
+{
+  "price": "5.99"
+}
+// ❌ Error: "Kitob narxi kamida 10$ bo'lishi kerak"
+```
+
+**2. ISBN validatsiyasi:**
+```json
+{
+  "isbn": "12345"
+}
+// ❌ Error: "ISBN 10 yoki 13 ta belgidan iborat bo'lishi kerak"
+```
+
+**3. Sana validatsiyasi:**
+```json
+{
+  "published_date": "2026-01-01"
+}
+// ❌ Error: "Nashr sanasi kelajakda bo'lishi mumkin emas"
+```
+
+---
 
 ## Keyingi qadamlar
 
