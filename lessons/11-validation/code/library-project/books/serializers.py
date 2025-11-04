@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from .models import Book
 from .validators import (
     validate_isbn_format,
+    validate_not_digits_only,
     validate_no_special_chars,
     validate_capitalized,
     PriceRangeValidator,
@@ -42,6 +43,11 @@ class BookFieldValidationSerializer(serializers.ModelSerializer):
         if not value[0].isupper():
             raise serializers.ValidationError(
                 "Kitob nomi bosh harf bilan boshlanishi kerak"
+            )
+        
+        if value.isdigit():
+            raise serializers.ValidationError(
+                "Sarlavha faqat raqamlardan iborat bo'lishi mumkin emas!"
             )
         
         return value.title()  # Har bir so'zni bosh harf bilan qaytarish
@@ -276,6 +282,7 @@ class BookCompleteValidationSerializer(serializers.ModelSerializer):
         max_length=200,
         validators=[
             validate_no_special_chars,
+            validate_not_digits_only,
             MinWordsValidator(2)
         ]
     )
@@ -307,7 +314,7 @@ class BookCompleteValidationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = '__all__'
-    
+
     # Field-level validation
     def validate_author(self, value):
         """Author har bir so'z bosh harf bilan"""
@@ -332,6 +339,7 @@ class BookCompleteValidationSerializer(serializers.ModelSerializer):
         # Title va author unique kombinatsiyasi
         title = data.get('title')
         author = data.get('author')
+        cover_image = data.get('cover_image')
         
         if title and author:
             queryset = Book.objects.filter(title=title, author=author)
@@ -346,6 +354,13 @@ class BookCompleteValidationSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         "Bu muallif tomonidan bunday nomli kitob allaqachon mavjud"
                     )
+                
+        if cover_image:
+            same_cover_books = Book.objects.filter(cover_image=cover_image)
+            if same_cover_books.exists():
+                raise serializers.ValidationError(
+                    "Bu rasm boshqa kitob uchun allaqachon ishlatilgan"
+                )
         
         return data
 
