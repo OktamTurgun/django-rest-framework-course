@@ -35,6 +35,17 @@ def validate_isbn_format(value):
         raise serializers.ValidationError(
             "ISBN faqat raqamlardan iborat bo'lishi kerak"
         )
+    
+def validate_not_digits_only(value):
+    """
+    Faqat raqamlardan iborat bo‘lmasin.
+    Masalan: '12345' ❌ | 'Book 123' ✅
+    """
+    cleaned_value = value.replace(" ", "")
+    if cleaned_value.isdigit():
+        raise serializers.ValidationError(
+            "Qiymat faqat raqamlardan iborat bo‘lishi mumkin emas."
+        )
 
 
 def validate_no_special_chars(value):
