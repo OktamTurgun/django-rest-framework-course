@@ -6,6 +6,9 @@ from .views import (
     BookBuiltInValidatorsListView,
     BookListCreateView,
     BookDetailView,
+
+     # Homework view
+     BookHomeworkFieldValidationView,
 )
 
 urlpatterns = [
@@ -39,4 +42,10 @@ urlpatterns = [
     path('books/<int:pk>/', 
          BookDetailView.as_view(), 
          name='book-detail'),
+
+     # Homework endpoint
+     # ===== Homework endpoints =====
+    path('homework/field-validation/', 
+         BookHomeworkFieldValidationView.as_view(), 
+         name='homework-field-validation'),
 ]

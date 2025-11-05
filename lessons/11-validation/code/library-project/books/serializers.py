@@ -370,3 +370,194 @@ BookSerializer = BookCompleteValidationSerializer
 BookModelSerializer = BookCompleteValidationSerializer
 BookListSerializer = BookCompleteValidationSerializer
 BookDetailSerializer = BookCompleteValidationSerializer
+
+# ============================================
+# HOMEWORK: VAZIFA 1 - FIELD-LEVEL VALIDATION
+# ============================================
+
+class BookHomeworkFieldValidationSerializer(serializers.ModelSerializer):
+    """
+    Homework: To'liq field-level validation
+    Barcha fieldlar uchun validation qo'shilgan
+    """
+    
+    class Meta:
+        model = Book
+        fields = '__all__'
+    
+    def validate_title(self, value):
+        """
+        Title validation:
+        ✅ Kamida 2 ta so'zdan iborat
+        ✅ Bosh harf bilan boshlanishi
+        ✅ Maxsus belgilar yo'q (faqat harflar, raqamlar, :,.)
+        ✅ 200 belgidan oshmasligi
+        """
+        # 1. Kamida 2 ta so'z
+        words = value.split()
+        if len(words) < 2:
+            raise serializers.ValidationError(
+                "Kitob nomi kamida 2 ta so'zdan iborat bo'lishi kerak"
+            )
+        
+        # 2. Bosh harf bilan boshlanishi
+        if not value[0].isupper():
+            raise serializers.ValidationError(
+                "Kitob nomi bosh harf bilan boshlanishi kerak"
+            )
+        
+        # 3. Maxsus belgilar tekshirish
+        import re
+        if not re.match(r'^[a-zA-Z0-9\s\-:,\.]+$', value):
+            raise serializers.ValidationError(
+                "Faqat harflar, raqamlar va asosiy belgilar (:,-.) ruxsat etilgan"
+            )
+        
+        return value.title()
+    
+    def validate_author(self, value):
+        """
+        Author validation:
+        ✅ Kamida 2 ta so'z (ism va familiya)
+        ✅ Har bir so'z bosh harf bilan
+        ✅ Faqat harflar va bo'shliq
+        ✅ 100 belgidan oshmasligi
+        """
+        import re
+        
+        # 1. Faqat harflar va bo'shliq
+        if not re.match(r'^[a-zA-Z\s]+$', value):
+            raise serializers.ValidationError(
+                "Muallif ismi faqat harflar va bo'shliqdan iborat bo'lishi kerak"
+            )
+        
+        # 2. Kamida 2 ta so'z
+        words = value.split()
+        if len(words) < 2:
+            raise serializers.ValidationError(
+                "Muallif ismi kamida 2 ta so'zdan (ism va familiya) iborat bo'lishi kerak"
+            )
+        
+        # 3. Har bir so'z bosh harf bilan
+        for word in words:
+            if not word[0].isupper():
+                raise serializers.ValidationError(
+                    "Har bir so'z bosh harf bilan boshlanishi kerak"
+                )
+        
+        return value
+    
+    def validate_isbn_number(self, value):
+        """
+        ISBN validation:
+        ✅ 10 yoki 13 ta belgidan iborat
+        ✅ Faqat raqamlar (va '-' ruxsat)
+        ✅ Unique bo'lishi kerak
+        """
+        import re
+        
+        # 1. Tozalash (- va bo'shliqlarni olib tashlash)
+        clean_value = value.replace('-', '').replace(' ', '')
+        
+        # 2. Uzunlik tekshirish
+        if len(clean_value) not in [10, 13]:
+            raise serializers.ValidationError(
+                "ISBN 10 yoki 13 ta belgidan iborat bo'lishi kerak"
+            )
+        
+        # 3. Faqat raqamlar
+        if not clean_value.isdigit():
+            raise serializers.ValidationError(
+                "ISBN faqat raqamlardan iborat bo'lishi kerak"
+            )
+        
+        # 4. Format tekshirish (agar - bo'lsa)
+        if '-' in value:
+            if len(clean_value) == 10:
+                pattern = r'^\d{1}-\d{3}-\d{5}-\d{1}$'
+            else:  # 13
+                pattern = r'^\d{3}-\d{1}-\d{3}-\d{5}-\d{1}$'
+            
+            if not re.match(pattern, value):
+                raise serializers.ValidationError(
+                    "ISBN formati noto'g'ri. To'g'ri format: XXX-X-XXX-XXXXX-X"
+                )
+        
+        # 5. Unique tekshirish
+        queryset = Book.objects.filter(isbn_number=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "Bu ISBN allaqachon mavjud"
+            )
+        
+        return value
+    
+    def validate_price(self, value):
+        """
+        Price validation:
+        ✅ Musbat son
+        ✅ 5$ dan kam emas
+        ✅ 1000$ dan ko'p emas
+        ✅ Faqat 2 ta o'nlik xona
+        """
+        # 1. Musbat son
+        if value <= 0:
+            raise serializers.ValidationError(
+                "Narx musbat son bo'lishi kerak"
+            )
+        
+        # 2. Minimal narx
+        if value < 5:
+            raise serializers.ValidationError(
+                "Kitob narxi kamida 5$ bo'lishi kerak"
+            )
+        
+        # 3. Maksimal narx
+        if value > 1000:
+            raise serializers.ValidationError(
+                "Narx 1000$ dan oshmasligi kerak"
+            )
+        
+        # 4. O'nlik xonalar soni (2 ta)
+        decimal_places = str(value).split('.')[-1] if '.' in str(value) else ''
+        if len(decimal_places) > 2:
+            raise serializers.ValidationError(
+                "Narx faqat 2 ta o'nlik xonaga ega bo'lishi mumkin"
+            )
+        
+        return value
+    
+    def validate_published_date(self, value):
+        """
+        Published date validation:
+        ✅ Kelajakda bo'lmasligi kerak
+        ✅ 1450-yildan keyin
+        ✅ Bugundan 100 yildan ortiq emas
+        """
+        from datetime import date, timedelta
+        
+        today = date.today()
+        
+        # 1. Kelajakda emas
+        if value > today:
+            raise serializers.ValidationError(
+                "Nashr sanasi kelajakda bo'lishi mumkin emas"
+            )
+        
+        # 2. 1450-yildan keyin (Gutenberg bosmaxonasi)
+        if value.year < 1450:
+            raise serializers.ValidationError(
+                "Nashr sanasi 1450-yildan keyin bo'lishi kerak (bosmaxona ixtirosi)"
+            )
+        
+        # 3. 100 yildan ortiq emas
+        hundred_years_ago = today - timedelta(days=36500)  # 100 yil
+        if value < hundred_years_ago:
+            raise serializers.ValidationError(
+                "Nashr sanasi bugundan 100 yildan ortiq emas bo'lishi kerak"
+            )
+        
+        return value
