@@ -9,6 +9,9 @@ from .serializers import (
     BookCustomValidatorsSerializer,
     BookBuiltInValidatorsSerializer,
     BookCompleteValidationSerializer,
+    
+    # Homework serializer
+    BookHomeworkFieldValidationSerializer
 )
 
 
@@ -184,3 +187,29 @@ class BookDetailView(APIView):
             {"message": "Kitob muvaffaqiyatli o'chirildi"},
             status=status.HTTP_204_NO_CONTENT
         )
+    
+# ============================================
+# HOMEWORK ENDPOINTS
+# ============================================
+
+class BookHomeworkFieldValidationView(APIView):
+    """
+    Homework Vazifa 1: Field-level validation test
+    URL: /api/homework/field-validation/
+    """
+    
+    def get(self, request):
+        books = Book.objects.all()
+        serializer = BookHomeworkFieldValidationSerializer(books, many=True)
+        return Response({
+            'message': 'Homework: Field-level validation',
+            'count': len(serializer.data),
+            'results': serializer.data
+        })
+    
+    def post(self, request):
+        serializer = BookHomeworkFieldValidationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
