@@ -9,6 +9,7 @@ from .views import (
 
      # Homework view
      BookHomeworkFieldValidationView,
+     BookHomeworkObjectValidationView,
 )
 
 urlpatterns = [
@@ -48,4 +49,8 @@ urlpatterns = [
     path('homework/field-validation/', 
          BookHomeworkFieldValidationView.as_view(), 
          name='homework-field-validation'),
+
+    path('homework/object-validation/', 
+         BookHomeworkObjectValidationView.as_view(), 
+         name='homework-object-validation'),
 ]
