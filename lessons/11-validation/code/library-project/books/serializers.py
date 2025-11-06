@@ -561,3 +561,73 @@ class BookHomeworkFieldValidationSerializer(serializers.ModelSerializer):
             )
         
         return value
+    
+# ============================================
+# HOMEWORK: VAZIFA 2 - OBJECT-LEVEL VALIDATION
+# ============================================
+
+class BookHomeworkObjectValidationSerializer(serializers.ModelSerializer):
+    """
+    Homework: Object-level validation
+    Mavjud Book model fieldlari bilan ishlash
+    """
+    
+    class Meta:
+        model = Book
+        fields = '__all__'
+    
+    def validate(self, data):
+        """
+        Object-level validation (soddalashtirilgan):
+        1. Title va author unique kombinatsiyasi
+        2. Subtitle uzunligi
+        """
+        # 1. Title va author unique bo'lishi kerak
+        title = data.get('title')
+        author = data.get('author')
+        
+        if title and author:
+            queryset = Book.objects.filter(title=title, author=author)
+            
+            if not self.instance:  # Yangi obyekt
+                if queryset.exists():
+                    raise serializers.ValidationError(
+                        "Bu muallif tomonidan bunday nomli kitob allaqachon mavjud"
+                    )
+            else:  # Mavjud obyektni yangilash
+                if queryset.exclude(pk=self.instance.pk).exists():
+                    raise serializers.ValidationError(
+                        "Bu muallif tomonidan bunday nomli kitob allaqachon mavjud"
+                    )
+        
+        # 2. Subtitle validation
+        subtitle = data.get('subtitle', '')
+        if subtitle and title:
+            if len(subtitle) > len(title):
+                raise serializers.ValidationError({
+                    'subtitle': 'Subtitle asosiy nomdan uzun bo\'lmasligi kerak'
+                })
+        
+        # 3. Price va published_date bo'yicha qoidalar
+        # 3. Price va published_date bo'yicha qoidalar
+        price = data.get('price')
+        published_date = data.get('published_date')
+        
+        if price and published_date:
+            from datetime import date, timedelta
+            
+            # Yangi kitoblar qimmatroq bo'lishi kerak
+            one_year_ago = date.today() - timedelta(days=365)
+            
+            # DEBUG: Ko'rish uchun
+            print(f"Bugungi sana: {date.today()}")
+            print(f"1 yil oldin: {one_year_ago}")
+            print(f"Kitob sanasi: {published_date}")
+            print(f"Yangi kitobmi: {published_date > one_year_ago}")
+            
+            if published_date > one_year_ago and price < 20:
+                raise serializers.ValidationError({
+                    'price': 'Oxirgi 1 yil ichida chiqgan kitoblar narxi kamida 20$ bo\'lishi kerak'
+                })
+        
+        return data

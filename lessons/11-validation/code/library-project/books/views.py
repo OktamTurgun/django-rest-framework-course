@@ -5,13 +5,15 @@ from django.shortcuts import get_object_or_404
 from .models import Book
 from .serializers import (
     BookFieldValidationSerializer,
+    BookHomeworkObjectValidationSerializer,
     BookObjectValidationSerializer,
     BookCustomValidatorsSerializer,
     BookBuiltInValidatorsSerializer,
     BookCompleteValidationSerializer,
     
     # Homework serializer
-    BookHomeworkFieldValidationSerializer
+    BookHomeworkFieldValidationSerializer,
+    BookHomeworkObjectValidationSerializer,
 )
 
 
@@ -209,6 +211,28 @@ class BookHomeworkFieldValidationView(APIView):
     
     def post(self, request):
         serializer = BookHomeworkFieldValidationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class BookHomeworkObjectValidationView(APIView):
+    """
+    Homework Vazifa 2: Object-level validation test
+    URL: /api/homework/object-validation/
+    """
+    
+    def get(self, request):
+        books = Book.objects.all()
+        serializer = BookHomeworkObjectValidationSerializer(books, many=True)
+        return Response({
+            'message': 'Homework: Object-level validation',
+            'count': len(serializer.data),
+            'results': serializer.data
+        })
+    
+    def post(self, request):
+        serializer = BookHomeworkObjectValidationSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
