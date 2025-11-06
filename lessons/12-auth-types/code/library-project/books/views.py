@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from .models import Book
 from .serializers import (
@@ -237,3 +238,35 @@ class BookHomeworkObjectValidationView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# ============================================
+# PROTECTED VIEW TO TEST AUTHENTICATION TYPES
+# ============================================
+class ProtectedView(APIView):
+    """
+    Faqat autentifikatsiya qilingan foydalanuvchilar uchun
+    Bu endpoint autentifikatsiya turlarini test qilish uchun
+    
+    GET /api/books/protected/
+    Header: Authorization: Token <token>
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Qaysi autentifikatsiya turi ishlatilganini aniqlash
+        auth_type = 'Unknown'
+        
+        if request.auth:
+            auth_type = request.auth.__class__.__name__
+        elif request.user.is_authenticated:
+            auth_type = 'Session'
+            
+        return Response({
+            'message': 'Siz muvaffaqiyatli autentifikatsiya qildingiz!',
+            'user': request.user.username,
+            'user_id': request.user.pk,
+            'email': request.user.email,
+            'auth_method': auth_type,
+            'is_staff': request.user.is_staff
+        })

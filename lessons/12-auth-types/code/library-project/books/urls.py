@@ -6,6 +6,7 @@ from .views import (
     BookBuiltInValidatorsListView,
     BookListCreateView,
     BookDetailView,
+    ProtectedView,
 
      # Homework view
      BookHomeworkFieldValidationView,
@@ -53,4 +54,9 @@ urlpatterns = [
     path('homework/object-validation/', 
          BookHomeworkObjectValidationView.as_view(), 
          name='homework-object-validation'),
+
+     # ===== Protected view to test authentication types =====
+     path('protected/', 
+          ProtectedView.as_view(), 
+          name='protected'),
 ]

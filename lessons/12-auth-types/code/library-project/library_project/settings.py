@@ -45,9 +45,11 @@ INSTALLED_APPS = [
     # Third-party apps
     "rest_framework",
     "drf_spectacular",
+    'rest_framework.authtoken',
 
     # Local apps
-    "books",
+    "books.apps.BooksConfig",
+    "accounts.apps.AccountsConfig",
 ]
 
 # REST FRAMEWORK SETTINGS
@@ -58,6 +60,16 @@ REST_FRAMEWORK = {
     
     # Schema ← QOSHING
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    # Authentication & Permission
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
 }
 
 # SPECTACULAR_SETTINGS
