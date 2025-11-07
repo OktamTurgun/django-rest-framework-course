@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
 from .models import Book
 from .serializers import (
@@ -17,7 +17,6 @@ from .serializers import (
     BookHomeworkObjectValidationSerializer,
 )
 
-
 # ============================================
 # FIELD-LEVEL VALIDATION ENDPOINTS
 # ============================================
@@ -27,6 +26,7 @@ class BookFieldValidationListView(APIView):
     Field-level validation bilan
     URL: /api/books/field-validation/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI
     
     def get(self, request):
         books = Book.objects.all()
@@ -44,7 +44,6 @@ class BookFieldValidationListView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # ============================================
 # OBJECT-LEVEL VALIDATION ENDPOINTS
 # ============================================
@@ -54,6 +53,7 @@ class BookObjectValidationListView(APIView):
     Object-level validation bilan
     URL: /api/books/object-validation/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI
     
     def get(self, request):
         books = Book.objects.all()
@@ -71,7 +71,6 @@ class BookObjectValidationListView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # ============================================
 # CUSTOM VALIDATORS ENDPOINTS
 # ============================================
@@ -81,6 +80,7 @@ class BookCustomValidatorsListView(APIView):
     Custom validators bilan
     URL: /api/books/custom-validators/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly] 
     
     def get(self, request):
         books = Book.objects.all()
@@ -97,6 +97,7 @@ class BookCustomValidatorsListView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # ============================================
@@ -130,11 +131,14 @@ class BookBuiltInValidatorsListView(APIView):
 # COMPLETE VALIDATION (ASOSIY ENDPOINT)
 # ============================================
 
+
+
 class BookListCreateView(APIView):
     """
     Barcha validation'lar bilan
     URL: /api/books/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]  # GET - hamma, POST - faqat auth
     
     def get(self, request):
         books = Book.objects.all()
@@ -152,12 +156,12 @@ class BookListCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class BookDetailView(APIView):
     """
     Bitta kitob bilan ishlash
     URL: /api/books/<pk>/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI QO'SHDIK
     
     def get_object(self, pk):
         return get_object_or_404(Book, pk=pk)
