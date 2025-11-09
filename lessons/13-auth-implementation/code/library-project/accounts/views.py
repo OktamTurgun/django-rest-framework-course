@@ -12,6 +12,21 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
+# === IMPORTS FOR HOMEWORK 1: PASSWORD RESET ===
+import secrets
+from django.core.cache import cache
+
+# === IMPORTS FOR HOMEWORK 2: JWT AUTHENTICATION ===
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+# === IMPORT FOR HOMEWORK 3: SESSION AUTHENTICATION
+from django.contrib.auth import login as django_login, logout as django_logout
+from rest_framework.authentication import SessionAuthentication
+
+# === IMPORT FOR HOMEWORK 4: BASIC AUTHENTICATION
+from rest_framework.authentication import BasicAuthentication
+
 
 # ============================================
 # REGISTER - Ro'yxatdan o'tish
@@ -283,3 +298,310 @@ class ChangePasswordView(APIView):
             'message': 'Parol o\'zgartirildi',
             'token': new_token.key
         }, status=status.HTTP_200_OK)
+    
+# ============================================
+# HOMEWORK 1: PASSWORD RESET (Token Auth)
+# ============================================
+class PasswordResetRequestView(APIView):
+    """
+    Email orqali parol tiklash so'rovi
+    
+    POST /api/accounts/password-reset-request/
+    Body: {"email": "user@example.com"}
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response(
+                {'error': 'Email talab qilinadi'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # 6 ta raqamli kod yaratish
+            reset_code = secrets.randbelow(1000000)
+            reset_code = f"{reset_code:06d}"  # 000123 formatda
+            
+            # Cache'da 15 daqiqa (900 sekund) saqlash
+            cache_key = f'password_reset_{email}'
+            cache.set(cache_key, reset_code, timeout=900)
+            
+            # Console'da ko'rsatish (email o'rniga)
+            print(f"\n{'='*60}")
+            print(f"PASSWORD RESET CODE for {email}")
+            print(f"Code: {reset_code}")
+            print(f"Valid for: 15 minutes")
+            print(f"{'='*60}\n")
+            
+            return Response({
+                'message': 'Reset code yuborildi (console ga qarang)',
+                'email': email,
+                'expires_in': '15 minutes'
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            # Security: email mavjud emasligini aytmaymiz
+            return Response({
+                'message': 'Agar email to\'g\'ri bo\'lsa, kod yuborildi'
+            }, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Reset code bilan yangi parol o'rnatish
+    
+    POST /api/accounts/password-reset-confirm/
+    Body: {
+        "email": "user@example.com",
+        "reset_code": "123456",
+        "new_password": "newpass123"
+    }
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    
+    def post(self, request):
+        email = request.data.get('email')
+        reset_code = request.data.get('reset_code')
+        new_password = request.data.get('new_password')
+        
+        # Validatsiya
+        if not all([email, reset_code, new_password]):
+            return Response(
+                {'error': 'Email, reset_code va new_password talab qilinadi'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Cache'dan kodni olish
+        cache_key = f'password_reset_{email}'
+        cached_code = cache.get(cache_key)
+        
+        if not cached_code:
+            return Response(
+                {'error': 'Reset code muddati o\'tgan yoki mavjud emas'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if cached_code != reset_code:
+            return Response(
+                {'error': 'Reset code noto\'g\'ri'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # Yangi parolni o'rnatish
+            user.set_password(new_password)
+            user.save()
+            
+            # Cache'dan code'ni o'chirish
+            cache.delete(cache_key)
+            
+            # Barcha eski tokenlarni o'chirish (security)
+            Token.objects.filter(user=user).delete()
+            
+            # Yangi token yaratish
+            new_token = Token.objects.create(user=user)
+            
+            return Response({
+                'message': 'Parol muvaffaqiyatli o\'zgartirildi',
+                'token': new_token.key,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User topilmadi'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+# ============================================
+# HOMEWORK 2: JWT AUTHENTICATION
+# ============================================
+class CustomJWTSerializer(TokenObtainPairSerializer):
+    """
+    Custom JWT serializer - qo'shimcha ma'lumotlar bilan
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        
+        # Token payload'ga qo'shimcha claims
+        token['username'] = user.username
+        token['email'] = user.email
+        token['is_staff'] = user.is_staff
+        
+        return token
+    
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        # Response'ga qo'shimcha ma'lumot
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+        }
+        
+        return data
+
+
+class JWTLoginView(TokenObtainPairView):
+    """
+    JWT Login - Custom response bilan
+    
+    POST /api/accounts/jwt/login/
+    Body: {"username": "john", "password": "pass123"}
+    
+    Response:
+    {
+        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "user": {...}
+    }
+    """
+    serializer_class = CustomJWTSerializer
+
+# ============================================
+# HOMEWORK 3: SESSION AUTHENTICATION
+# ============================================
+
+
+class SessionLoginView(APIView):
+    """
+    Session-based login (Cookie bilan)
+    
+    POST /api/accounts/session/login/
+    Body: {"username": "john", "password": "pass123"}
+    """
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        
+        if not username or not password:
+            return Response(
+                {'error': 'Username va password talab qilinadi'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Authenticate
+        user = authenticate(username=username, password=password)
+        
+        if user:
+            # Django session yaratish
+            django_login(request, user)
+            
+            return Response({
+                'message': 'Session login muvaffaqiyatli',
+                'session_key': request.session.session_key,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                }
+            }, status=status.HTTP_200_OK)
+        
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+
+class SessionLogoutView(APIView):
+    """
+    Session logout
+    
+    POST /api/accounts/session/logout/
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
+    
+    def post(self, request):
+        django_logout(request)
+        return Response({
+            'message': 'Session logout muvaffaqiyatli'
+        }, status=status.HTTP_200_OK)
+
+
+class SessionUserInfoView(APIView):
+    """
+    Session bilan user info
+    
+    GET /api/accounts/session/me/
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
+    
+    def get(self, request):
+        user = request.user
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'session_key': request.session.session_key,
+        }, status=status.HTTP_200_OK)
+    
+# ============================================
+# HOMEWORK 4: BASIC AUTHENTICATION
+# ============================================
+
+
+class BasicAuthUserInfoView(APIView):
+    """
+    Basic Authentication bilan user info
+    
+    GET /api/accounts/basic/me/
+    
+    Authorization: Basic base64(username:password)
+    """
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        return Response({
+            'message': 'Basic Authentication successful',
+            'auth_type': 'Basic Auth',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class BasicAuthTestView(APIView):
+    """
+    Basic Auth test endpoint
+    
+    POST /api/accounts/basic/test/
+    """
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        return Response({
+            'message': 'Basic Auth POST request successful',
+            'username': request.user.username,
+            'data_received': request.data
+        })
