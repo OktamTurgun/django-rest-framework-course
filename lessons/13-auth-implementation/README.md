@@ -114,6 +114,104 @@ Cookie: sessionid=<session-id>
 # JWT Authentication (bonus)
 Authorization: Bearer <jwt-token>
 ```
+---
+
+## Homework - Qo'shimcha Authentication Turlari
+
+### Implemented Features:
+
+#### 1. Password Reset (Token Auth)
+- Email bilan reset code olish
+- Code bilan parolni tiklash
+- Console'da kod ko'rsatish
+- 15 daqiqa expire time
+
+**Endpoints:**
+```
+POST /api/accounts/password-reset-request/
+POST /api/accounts/password-reset-confirm/
+```
+
+#### 2. JWT Authentication
+- JWT token generation
+- Access token (60 min)
+- Refresh token (7 days)
+- Custom user data in token payload
+
+**Endpoints:**
+```
+POST /api/accounts/jwt/login/
+POST /api/accounts/jwt/refresh/
+POST /api/accounts/jwt/verify/
+```
+
+#### 3. Session Authentication
+- Cookie-based authentication
+- Django session backend
+- 24 hours session lifetime
+
+**Endpoints:**
+```
+POST /api/accounts/session/login/
+POST /api/accounts/session/logout/
+GET  /api/accounts/session/me/
+```
+
+#### 4. Basic Authentication
+- Username:Password base64 encoded
+- Header-based authentication
+- Test endpoints
+
+**Endpoints:**
+```
+GET  /api/accounts/basic/me/
+POST /api/accounts/basic/test/
+```
+
+---
+
+## Authentication Comparison
+
+| Auth Type | Stateful | DB Required | Mobile-Friendly | Security |
+|-----------|----------|-------------|-----------------|----------|
+| Token | ✅ | ✅ | ✅ | ⭐⭐⭐⭐ |
+| JWT | ❌ | ❌ | ✅ | ⭐⭐⭐⭐ |
+| Session | ✅ | ✅ | ❌ | ⭐⭐⭐ |
+| Basic | ❌ | ❌ | ⚠️ | ⭐⭐ |
+
+---
+
+## Testing
+
+All endpoints tested with Postman:
+- ✅ 16 Main Lesson tests
+- ✅ 8 Homework tests
+- ✅ Total: 24 test cases
+
+See: `Library_API_Lesson13_Complete.postman_collection.json`
+
+---
+
+## Technologies Used
+
+- Django 5.2.7
+- Django REST Framework 3.15.2
+- djangorestframework-simplejwt 5.3.1
+- Token Authentication (DRF built-in)
+- JWT Authentication
+- Session Authentication
+- Basic Authentication
+
+---
+
+## Learning Outcomes
+
+Ushbu darsdan keyin siz:
+-  4 xil authentication usulini bilib oldingiz
+-  Har birining afzallik va kamchiliklarini tushundingiz
+-  Production-ready authentication code yoza olasiz
+-  Security best practices'ni qo'llay olasiz
+-  Mobile va web uchun auth implement qila olasiz
 
 ## Qo'llanma
 
