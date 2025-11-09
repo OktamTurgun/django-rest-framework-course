@@ -9,6 +9,7 @@ djangorestframework = "*"
 django = "*"
 drf-spectacular = "*"
 requests = "*"
+djangorestframework-simplejwt = "*"
 
 [dev-packages]
 

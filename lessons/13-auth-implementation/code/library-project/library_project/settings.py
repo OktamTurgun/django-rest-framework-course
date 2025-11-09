@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config, Csv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     'rest_framework.authtoken',
+    "rest_framework_simplejwt",
 
     # Local apps
     "books.apps.BooksConfig",
@@ -64,14 +66,15 @@ REST_FRAMEWORK = {
 
     # Authentication Classes
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',      # Token auth (birinchi)
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT auth (birinchi)
+        'rest_framework.authentication.TokenAuthentication',      # Token auth (ikkinchi)
         'rest_framework.authentication.SessionAuthentication',   # Session auth (browsable API)
         'rest_framework.authentication.BasicAuthentication',     # Basic auth (test uchun)
     ],
     
     # Permission Classes
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # Default permission
+        # 'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # Default permission
     ],
     
     # Renderer Classes
@@ -162,3 +165,38 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # === DEFAULT PRIMARY KEY FIELD TYPE ===
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# === CACHE SETTINGS (Password Reset uchun) ===
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# === JWT SETTINGS ===
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),     # 1 soat
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),        # 7 kun
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+# === SESSION SETTINGS ===
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 86400  # 24 hours (seconds)
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_NAME = 'library_sessionid'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False  # Production'da True qiling
