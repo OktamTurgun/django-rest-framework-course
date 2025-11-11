@@ -10,6 +10,8 @@ django = "*"
 drf-spectacular = "*"
 requests = "*"
 djangorestframework-simplejwt = "*"
+django-allauth = "*"
+dj-rest-auth = "*"
 
 [dev-packages]
 

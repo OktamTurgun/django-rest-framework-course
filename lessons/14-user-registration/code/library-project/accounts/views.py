@@ -41,7 +41,7 @@ class RegisterView(APIView):
     """
     Yangi foydalanuvchi ro'yxatdan o'tkazish
     
-    POST /api/accounts/register/
+    POST /api/accounts/register-old/
     Body: {"username": "john", "password": "pass123", "email": "john@example.com"}
     """
     permission_classes = [AllowAny]

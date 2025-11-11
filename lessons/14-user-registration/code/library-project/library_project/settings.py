@@ -36,6 +36,7 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
 # Application definition
 
 INSTALLED_APPS = [
+    "django.contrib.sites", # New for allauth
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -48,6 +49,11 @@ INSTALLED_APPS = [
     "drf_spectacular",
     'rest_framework.authtoken',
     "rest_framework_simplejwt",
+    'dj_rest_auth',
+    'allauth',
+    'allauth.account',
+    "allauth.socialaccount",
+    'dj_rest_auth.registration',
 
     # Local apps
     "books.apps.BooksConfig",
@@ -110,6 +116,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # allauth uchun middleware
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 # === URLS ===
@@ -176,8 +184,8 @@ CACHES = {
 
 # === JWT SETTINGS ===
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),     # 1 soat
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),        # 7 kun
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),     # 30 daqiqa
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),        # 1 kun
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
     
@@ -200,3 +208,6 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_NAME = 'library_sessionid'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False  # Production'da True qiling
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Development uchun
+SITE_ID = 1
