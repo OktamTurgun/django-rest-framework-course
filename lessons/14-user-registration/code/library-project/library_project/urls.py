@@ -20,7 +20,12 @@ urlpatterns = [
     
     # DRF Browsable API login (optional)
     path('api-auth/', include('rest_framework.urls')),
+    # dj-rest-auth endpoints
+    path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
+
+    # Django auth views (muammo yechimi)
+    path('auth/', include('django.contrib.auth.urls')),
     
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
