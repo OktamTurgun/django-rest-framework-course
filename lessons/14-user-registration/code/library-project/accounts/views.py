@@ -27,6 +27,11 @@ from rest_framework.authentication import SessionAuthentication
 # === IMPORT FOR HOMEWORK 4: BASIC AUTHENTICATION
 from rest_framework.authentication import BasicAuthentication
 
+# === IMPORTS FOR LESSON 14: USER REGISTRATION ===
+from rest_framework.decorators import api_view, permission_classes
+from .serializers import UserRegistrationSerializer, UserSerializer
+from rest_framework.views import APIView
+
 
 # ============================================
 # REGISTER - Ro'yxatdan o'tish
@@ -605,3 +610,101 @@ class BasicAuthTestView(APIView):
             'username': request.user.username,
             'data_received': request.data
         })
+    
+# ============================================
+# LESSON 14: USER REGISTRATION (3 VARIANT)
+# ============================================
+
+from rest_framework import status, generics
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .serializers import UserRegistrationSerializer, UserSerializer
+
+
+# ========================================
+# VARIANT 1: FUNCTION-BASED VIEW
+# ========================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    """
+    Function-based registration
+    
+    POST /api/accounts/register/
+    
+    Body: {
+        "username": "newuser",
+        "email": "newuser@example.com",
+        "password": "SecurePass123!",
+        "password2": "SecurePass123!"
+    }
+    """
+    serializer = UserRegistrationSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        user = serializer.save()
+        user_serializer = UserSerializer(user)
+        
+        return Response({
+            'user': user_serializer.data,
+            'message': 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi (Function-based)'
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# VARIANT 2: CLASS-BASED VIEW (APIView)
+# ========================================
+
+class RegisterUserAPIView(APIView):
+    """
+    Class-based registration (APIView)
+    
+    POST /api/accounts/register-class/
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            user = serializer.save()
+            user_serializer = UserSerializer(user)
+            
+            return Response({
+                'user': user_serializer.data,
+                'message': 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi (APIView)'
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ========================================
+# VARIANT 3: GENERIC VIEW (Professional)
+# ========================================
+
+class RegisterUserGenericView(generics.CreateAPIView):
+    """
+    Generic view registration (Professional)
+    
+    POST /api/accounts/register-generic/
+    """
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        user_serializer = UserSerializer(user)
+        headers = self.get_success_headers(serializer.data)
+        
+        return Response({
+            'user': user_serializer.data,
+            'message': 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi (Generic)'
+        }, status=status.HTTP_201_CREATED, headers=headers)
