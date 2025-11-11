@@ -74,7 +74,7 @@ REST_FRAMEWORK = {
     
     # Permission Classes
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # Default permission
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # Default permission
     ],
     
     # Renderer Classes

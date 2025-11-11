@@ -4,6 +4,7 @@ Accounts app URL Configuration
 
 from django.urls import path
 from . import views
+from .views import register_user
 
 # === IMPORTS FOR HOMEWORK 2: JWT AUTHENTICATION ===
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
@@ -11,8 +12,11 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 app_name = 'accounts'
 
 urlpatterns = [
+    # ========================================
+    # LESSON 12-13: Old Authentication
+    # ========================================
     # Authentication
-    path('register/', views.RegisterView.as_view(), name='register'),
+    path('register-old/', views.RegisterView.as_view(), name='register-old'),
     path('login/', views.LoginView.as_view(), name='login'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     
@@ -40,4 +44,16 @@ urlpatterns = [
     # Homework 4: Basic Authentication
     path('basic/me/', views.BasicAuthUserInfoView.as_view(), name='basic_auth_user_info'),
     path('basic/test/', views.BasicAuthTestView.as_view(), name='basic_auth_test'),
+
+    # ========================================
+    #  LESSON 14: New User Registration (with Serializer)
+    # ========================================
+    # Function-based
+    path('register/', views.register_user, name='register'),
+    
+    # Class-based (APIView)
+    path('register-class/', views.RegisterUserAPIView.as_view(), name='register-class'),
+    
+    # Class-based (Generic)
+    path('register-generic/', views.RegisterUserGenericView.as_view(), name='register-generic'),
 ]
