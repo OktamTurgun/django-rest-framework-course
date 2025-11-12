@@ -11,6 +11,7 @@ class Book(models.Model):
     cover_image = models.URLField(blank=True, null=True)
     language = models.CharField(max_length=30)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    published = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.title} by {self.author}"
