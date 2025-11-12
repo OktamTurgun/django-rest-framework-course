@@ -13,6 +13,10 @@ from .validators import (
 )
 from datetime import date
 
+class BookSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = Book
+    fields = "__all__"
 
 # ============================================
 # 1. FIELD-LEVEL VALIDATION

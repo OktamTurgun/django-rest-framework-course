@@ -15,7 +15,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # API endpoints
-    path('api/books/', include('books.urls')),
+    path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
     
     # DRF Browsable API login (optional)

@@ -17,6 +17,11 @@ from .serializers import (
     BookHomeworkObjectValidationSerializer,
 )
 
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from .models import Book
+from .serializers import BookSerializer
+
 # ============================================
 # FIELD-LEVEL VALIDATION ENDPOINTS
 # ============================================
@@ -274,3 +279,78 @@ class ProtectedView(APIView):
             'auth_method': auth_type,
             'is_staff': request.user.is_staff
         })
+    
+# ============================================
+# 3. ModelViewSet (Eng ko'p ishlatiladigan)
+# Lesson 15 ViewSet va Router
+# ============================================
+
+class BookViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Book model
+    Barcha CRUD operatsiyalarini ta'minlaydi:
+    - list (GET /api/books/)
+    - retrieve (GET /api/books/{id}/)
+    - create (POST /api/books/)
+    - update (PUT /api/books/{id}/)
+    - partial_update (PATCH /api/books/{id}/)
+    - destroy (DELETE /api/books/{id}/)
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    # Custom action: Faqat published kitoblarni ko'rsatish
+    @action(detail=False, methods=['get'])
+    def published(self, request):
+        """
+        GET /api/books/published/
+        Faqat published=True bo'lgan kitoblarni qaytaradi
+        """
+        published_books = Book.objects.filter(published=True)
+        serializer = self.get_serializer(published_books, many=True)
+        return Response(serializer.data)
+    
+    # Custom action: Kitob statistikasi
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """
+        GET /api/books/statistics/
+        Kitoblar statistikasini qaytaradi
+        """
+        total_books = Book.objects.count()
+        published_books = Book.objects.filter(published=True).count()
+        unpublished_books = total_books - published_books
+        
+        data = {
+            'total_books': total_books,
+            'published_books': published_books,
+            'unpublished_books': unpublished_books,
+        }
+        return Response(data)
+    
+    # Custom action: Bitta kitobni publish qilish
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def publish(self, request, pk=None):
+        """
+        POST /api/books/{id}/publish/
+        Kitobni published=True qiladi
+        """
+        book = self.get_object()
+        book.published = True
+        book.save()
+        serializer = self.get_serializer(book)
+        return Response(serializer.data)
+    
+    # Custom action: Bitta kitobni unpublish qilish
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def unpublish(self, request, pk=None):
+        """
+        POST /api/books/{id}/unpublish/
+        Kitobni published=False qiladi
+        """
+        book = self.get_object()
+        book.published = False
+        book.save()
+        serializer = self.get_serializer(book)
+        return Response(serializer.data)
