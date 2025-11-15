@@ -13,10 +13,66 @@ from .validators import (
 )
 from datetime import date
 
+from rest_framework import serializers
+from .models import Book
+
+
 class BookSerializer(serializers.ModelSerializer):
-  class Meta:
-    model = Book
-    fields = "__all__"
+    """
+    Book modeli uchun serializer — owner maydoni bilan
+    
+    - owner maydoni faqat o‘qish uchun (read-only)
+    - owner avtomatik ravishda view ichida request.user bilan belgilanadi
+    - owner foydalanuvchi ID emas, balki username ko‘rinishida qaytariladi
+    """
+
+    # Foydalanuvchi ID o‘rniga username ko‘rsatadigan, faqat o‘qish uchun maydon
+    owner = serializers.ReadOnlyField(source='owner.username')
+
+    # Muqobil variant: Faqat user id qaytarish
+    # owner = serializers.ReadOnlyField(source='owner.id')
+
+    # Muqobil variant: Foydalanuvchini to‘liq obyekt ko‘rinishida qaytarish
+    # owner = serializers.StringRelatedField()
+
+    
+    class Meta:
+        model = Book
+        fields = "__all__"
+        read_only_fields = ['id', 'owner', 'created_at', 'updated_at']
+    
+    def validate_isbn_number(self, value):
+        """
+        Custom validation for ISBN
+        """
+        if len(value) != 13:
+            raise serializers.ValidationError(
+                "ISBN must be exactly 13 characters"
+            )
+        return value
+
+
+# Alternative: Nested user serializer
+class BookWithUserSerializer(serializers.ModelSerializer):
+    """
+    Book serializer with nested user information
+    """
+    owner = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Book
+        fields = '__all__'
+    
+    def get_owner(self, obj):
+        """
+        Return detailed owner information
+        """
+        return {
+            'id': obj.owner.id,
+            'username': obj.owner.username,
+            'email': obj.owner.email,
+            'is_staff': obj.owner.is_staff,
+        }
 
 # ============================================
 # 1. FIELD-LEVEL VALIDATION
@@ -370,10 +426,10 @@ class BookCompleteValidationSerializer(serializers.ModelSerializer):
 
 
 # Default serializer (backward compatibility)
-BookSerializer = BookCompleteValidationSerializer
-BookModelSerializer = BookCompleteValidationSerializer
-BookListSerializer = BookCompleteValidationSerializer
-BookDetailSerializer = BookCompleteValidationSerializer
+# BookSerializer = BookCompleteValidationSerializer
+# BookModelSerializer = BookCompleteValidationSerializer
+# BookListSerializer = BookCompleteValidationSerializer
+# BookDetailSerializer = BookCompleteValidationSerializer
 
 # ============================================
 # HOMEWORK: VAZIFA 1 - FIELD-LEVEL VALIDATION

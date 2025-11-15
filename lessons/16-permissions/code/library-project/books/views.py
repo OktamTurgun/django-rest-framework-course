@@ -1,37 +1,54 @@
+"""
+Books Views - Django REST Framework
+Lesson 16: Permissions Implementation
+
+This file contains:
+- Legacy APIView endpoints (for learning/reference)
+- Modern ViewSet with Permissions (current approach)
+"""
+
+# ============================================
+# IMPORTS
+# ============================================
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
+
 from .models import Book
 from .serializers import (
+    # Validation serializers (old lessons)
     BookFieldValidationSerializer,
-    BookHomeworkObjectValidationSerializer,
     BookObjectValidationSerializer,
     BookCustomValidatorsSerializer,
     BookBuiltInValidatorsSerializer,
     BookCompleteValidationSerializer,
-    
-    # Homework serializer
     BookHomeworkFieldValidationSerializer,
     BookHomeworkObjectValidationSerializer,
+    
+    # Current serializer
+    BookSerializer,
+)
+from .permissions import (
+    IsOwnerOrReadOnly,
+    IsPublishedOrOwner,
+    IsOwnerOrAdmin,
 )
 
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from .models import Book
-from .serializers import BookSerializer
 
 # ============================================
-# FIELD-LEVEL VALIDATION ENDPOINTS
+# LEGACY APIVIEW ENDPOINTS
+# (Kept for learning/reference - Lesson 8-11)
 # ============================================
 
 class BookFieldValidationListView(APIView):
     """
     Field-level validation bilan
-    URL: /api/books/field-validation/
+    URL: /api/old/field-validation/
     """
-    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -45,20 +62,17 @@ class BookFieldValidationListView(APIView):
     def post(self, request):
         serializer = BookFieldValidationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ============================================
-# OBJECT-LEVEL VALIDATION ENDPOINTS
-# ============================================
 
 class BookObjectValidationListView(APIView):
     """
     Object-level validation bilan
-    URL: /api/books/object-validation/
+    URL: /api/old/object-validation/
     """
-    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -72,20 +86,17 @@ class BookObjectValidationListView(APIView):
     def post(self, request):
         serializer = BookObjectValidationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# ============================================
-# CUSTOM VALIDATORS ENDPOINTS
-# ============================================
 
 class BookCustomValidatorsListView(APIView):
     """
     Custom validators bilan
-    URL: /api/books/custom-validators/
+    URL: /api/old/custom-validators/
     """
-    permission_classes = [IsAuthenticatedOrReadOnly] 
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -99,21 +110,17 @@ class BookCustomValidatorsListView(APIView):
     def post(self, request):
         serializer = BookCustomValidatorsSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-# ============================================
-# BUILT-IN VALIDATORS ENDPOINTS
-# ============================================
-
 class BookBuiltInValidatorsListView(APIView):
     """
     Built-in validators bilan
-    URL: /api/books/builtin-validators/
+    URL: /api/old/builtin-validators/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -127,23 +134,17 @@ class BookBuiltInValidatorsListView(APIView):
     def post(self, request):
         serializer = BookBuiltInValidatorsSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ============================================
-# COMPLETE VALIDATION (ASOSIY ENDPOINT)
-# ============================================
-
-
-
 class BookListCreateView(APIView):
     """
-    Barcha validation'lar bilan
-    URL: /api/books/
+    Complete validation endpoint
+    URL: /api/old/books/
     """
-    permission_classes = [IsAuthenticatedOrReadOnly]  # GET - hamma, POST - faqat auth
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -157,16 +158,17 @@ class BookListCreateView(APIView):
     def post(self, request):
         serializer = BookCompleteValidationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class BookDetailView(APIView):
     """
-    Bitta kitob bilan ishlash
-    URL: /api/books/<pk>/
+    Single book operations
+    URL: /api/old/books/<pk>/
     """
-    permission_classes = [IsAuthenticatedOrReadOnly]  # YANGI QO'SHDIK
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_object(self, pk):
         return get_object_or_404(Book, pk=pk)
@@ -199,16 +201,18 @@ class BookDetailView(APIView):
             {"message": "Kitob muvaffaqiyatli o'chirildi"},
             status=status.HTTP_204_NO_CONTENT
         )
-    
+
+
 # ============================================
 # HOMEWORK ENDPOINTS
 # ============================================
 
 class BookHomeworkFieldValidationView(APIView):
     """
-    Homework Vazifa 1: Field-level validation test
+    Homework: Field-level validation
     URL: /api/homework/field-validation/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -222,15 +226,17 @@ class BookHomeworkFieldValidationView(APIView):
     def post(self, request):
         serializer = BookHomeworkFieldValidationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class BookHomeworkObjectValidationView(APIView):
     """
-    Homework Vazifa 2: Object-level validation test
+    Homework: Object-level validation
     URL: /api/homework/object-validation/
     """
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get(self, request):
         books = Book.objects.all()
@@ -244,26 +250,24 @@ class BookHomeworkObjectValidationView(APIView):
     def post(self, request):
         serializer = BookHomeworkObjectValidationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(owner=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
 
 # ============================================
-# PROTECTED VIEW TO TEST AUTHENTICATION TYPES
+# AUTHENTICATION TEST ENDPOINT
 # ============================================
+
 class ProtectedView(APIView):
     """
-    Faqat autentifikatsiya qilingan foydalanuvchilar uchun
-    Bu endpoint autentifikatsiya turlarini test qilish uchun
-    
-    GET /api/books/protected/
-    Header: Authorization: Token <token>
+    Test authentication types
+    URL: /api/protected/
     """
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        # Qaysi autentifikatsiya turi ishlatilganini aniqlash
+        # Determine authentication type
         auth_type = 'Unknown'
         
         if request.auth:
@@ -279,44 +283,69 @@ class ProtectedView(APIView):
             'auth_method': auth_type,
             'is_staff': request.user.is_staff
         })
-    
+
+
 # ============================================
-# 3. ModelViewSet (Eng ko'p ishlatiladigan)
-# Lesson 15 ViewSet va Router
+# CURRENT APPROACH: VIEWSET WITH PERMISSIONS
+# (Lesson 15 & 16)
 # ============================================
 
 class BookViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Book model
-    Barcha CRUD operatsiyalarini ta'minlaydi:
-    - list (GET /api/books/)
-    - retrieve (GET /api/books/{id}/)
-    - create (POST /api/books/)
-    - update (PUT /api/books/{id}/)
-    - partial_update (PATCH /api/books/{id}/)
-    - destroy (DELETE /api/books/{id}/)
+    Modern ViewSet for Book model with Permissions
+    
+    URL: /api/books/
+    
+    Permissions:
+    - IsAuthenticatedOrReadOnly: GET - anyone, POST/PUT/DELETE - authenticated
+    - IsOwnerOrReadOnly: Only owner can modify
+    
+    Standard Actions:
+    - list: GET /api/books/ - Anyone
+    - create: POST /api/books/ - Authenticated users (auto-set owner)
+    - retrieve: GET /api/books/{id}/ - Anyone
+    - update: PUT /api/books/{id}/ - Owner only
+    - partial_update: PATCH /api/books/{id}/ - Owner only
+    - destroy: DELETE /api/books/{id}/ - Owner only
+    
+    Custom Actions:
+    - published: GET /api/books/published/ - Anyone
+    - statistics: GET /api/books/statistics/ - Anyone
+    - my_books: GET /api/books/my_books/ - Authenticated users
+    - publish: POST /api/books/{id}/publish/ - Owner only
+    - unpublish: POST /api/books/{id}/unpublish/ - Owner only
     """
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
     
-    # Custom action: Faqat published kitoblarni ko'rsatish
+    # Multiple permissions: BOTH must pass (AND logic)
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    
+    def perform_create(self, serializer):
+        """
+        Automatically set owner when creating a book
+        """
+        serializer.save(owner=self.request.user)
+    
+    # ========== CUSTOM ACTIONS ==========
+    
     @action(detail=False, methods=['get'])
     def published(self, request):
         """
         GET /api/books/published/
-        Faqat published=True bo'lgan kitoblarni qaytaradi
+        Returns only published books
+        Permission: Anyone
         """
         published_books = Book.objects.filter(published=True)
         serializer = self.get_serializer(published_books, many=True)
         return Response(serializer.data)
     
-    # Custom action: Kitob statistikasi
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """
         GET /api/books/statistics/
-        Kitoblar statistikasini qaytaradi
+        Returns book statistics
+        Permission: Anyone
         """
         total_books = Book.objects.count()
         published_books = Book.objects.filter(published=True).count()
@@ -329,12 +358,23 @@ class BookViewSet(viewsets.ModelViewSet):
         }
         return Response(data)
     
-    # Custom action: Bitta kitobni publish qilish
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_books(self, request):
+        """
+        GET /api/books/my_books/
+        Returns current user's books
+        Permission: Authenticated users only
+        """
+        my_books = Book.objects.filter(owner=request.user)
+        serializer = self.get_serializer(my_books, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOwnerOrReadOnly])
     def publish(self, request, pk=None):
         """
         POST /api/books/{id}/publish/
-        Kitobni published=True qiladi
+        Set book as published
+        Permission: Owner only
         """
         book = self.get_object()
         book.published = True
@@ -342,15 +382,85 @@ class BookViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(book)
         return Response(serializer.data)
     
-    # Custom action: Bitta kitobni unpublish qilish
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsOwnerOrReadOnly])
     def unpublish(self, request, pk=None):
         """
         POST /api/books/{id}/unpublish/
-        Kitobni published=False qiladi
+        Set book as unpublished
+        Permission: Owner only
         """
         book = self.get_object()
         book.published = False
         book.save()
         serializer = self.get_serializer(book)
         return Response(serializer.data)
+
+
+# ============================================
+# ALTERNATIVE: DYNAMIC PERMISSIONS PER ACTION
+# (Advanced example - for learning)
+# ============================================
+
+class BookViewSetWithDynamicPermissions(viewsets.ModelViewSet):
+    """
+    Example: ViewSet with action-based permissions
+    
+    Different permissions for different actions:
+    - list: Anyone
+    - create: Authenticated
+    - retrieve: Anyone (if published) or Owner (if unpublished)
+    - update/destroy: Owner or Admin
+    
+    NOTE: This is not used in URLs, kept as example
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    
+    def get_permissions(self):
+        """
+        Instantiate and return list of permissions for this action
+        """
+        if self.action == 'list':
+            # Anyone can list books
+            permission_classes = []
+        elif self.action == 'create':
+            # Only authenticated users can create
+            permission_classes = [IsAuthenticated]
+        elif self.action == 'retrieve':
+            # Published or Owner
+            permission_classes = [IsPublishedOrOwner]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Owner or Admin
+            permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
+        else:
+            # Default: authenticated or read-only
+            permission_classes = [IsAuthenticatedOrReadOnly]
+        
+        return [permission() for permission in permission_classes]
+    
+    def perform_create(self, serializer):
+        """Auto-set owner"""
+        serializer.save(owner=self.request.user)
+
+
+# ============================================
+# SUMMARY
+# ============================================
+"""
+Active ViewSets (used in urls.py):
+- BookViewSet: Modern approach with permissions
+
+Legacy Views (kept for reference):
+- BookFieldValidationListView
+- BookObjectValidationListView
+- BookCustomValidatorsListView
+- BookBuiltInValidatorsListView
+- BookListCreateView
+- BookDetailView
+- BookHomeworkFieldValidationView
+- BookHomeworkObjectValidationView
+- ProtectedView
+
+Example (not in URLs):
+- BookViewSetWithDynamicPermissions
+"""

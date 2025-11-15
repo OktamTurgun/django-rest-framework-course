@@ -63,30 +63,12 @@ INSTALLED_APPS = [
 # REST FRAMEWORK SETTINGS
 # https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
-    # Pagination
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-    
-    # Schema (Swagger/ReDoc uchun)
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
-    # Authentication Classes
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT auth (birinchi)
-        'rest_framework.authentication.TokenAuthentication',      # Token auth (ikkinchi)
-        'rest_framework.authentication.SessionAuthentication',   # Session auth (browsable API)
-        'rest_framework.authentication.BasicAuthentication',     # Basic auth (test uchun)
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
-    
-    # Permission Classes
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # Default permission
-    ],
-    
-    # Renderer Classes
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',  # ← YANGI!
     ],
 }
 
