@@ -4,6 +4,6 @@ from .models import Book
 # Register your models here.
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-  list_display = ("id","title", "author", "published_date", "isbn_number", "price", "published")
+  list_display = ("id","title", "author", "created_at", "isbn_number", "price", "published")
   search_fields = ("title", "author", "isbn_number", "language")
-  list_filter = ("published_date", "language", "published")
+  list_filter = ("created_at", "language", "published")
