@@ -11,6 +11,7 @@ Bir nechta permissionlarni birlashtirish:
 from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from datetime import datetime, time
 from .models import Book
 from .serializers import BookSerializer
 
@@ -61,7 +62,7 @@ class IsEmailConfirmed(permissions.BasePermission):
 
 class BookAdminOnlyView(viewsets.ModelViewSet):
     """
-    IsAdmin AND IsEmailConfirmed → har ikkisi True bo‘lishi shart
+    IsAdmin AND IsEmailConfirmed → har ikkisi True bo'lishi shart
     """
     queryset = Book.objects.all()
     serializer_class = BookSerializer
@@ -243,7 +244,173 @@ class BookView_Actions(viewsets.ModelViewSet):
 
 
 # ============================================
-# 10. Best Practices
+# 10. YANGI: Premium User Permission
+# ============================================
+
+class IsPremiumUser(permissions.BasePermission):
+    """
+    Premium userlar uchun maxsus permission
+    """
+    message = "Faqat premium userlar uchun!"
+    
+    def has_permission(self, request, view):
+        return (
+            request.user and 
+            request.user.is_authenticated and 
+            getattr(request.user, 'is_premium', False)
+        )
+
+
+class BookView_Premium(viewsets.ModelViewSet):
+    """
+    Premium feature: faqat premium userlar kirishi mumkin
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [IsPremiumUser]
+    
+    @action(detail=False, methods=['get'])
+    def premium_content(self, request):
+        """
+        Maxsus premium content
+        """
+        return Response({
+            'message': 'Premium content!',
+            'books': self.get_queryset()[:10]
+        })
+
+
+# ============================================
+# 11. YANGI: Time-based Permission
+# ============================================
+
+class IsBusinessHours(permissions.BasePermission):
+    """
+    Faqat ish vaqtida (9:00-18:00) ruxsat
+    """
+    message = "Ish vaqtida (9:00-18:00) foydalanish mumkin"
+    
+    def has_permission(self, request, view):
+        now = datetime.now().time()
+        start = time(9, 0)  # 9:00
+        end = time(18, 0)   # 18:00
+        return start <= now <= end
+
+
+class BookView_BusinessHours(viewsets.ModelViewSet):
+    """
+    Ish vaqtida ishlaydi (IsAuthenticated AND IsBusinessHours)
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [permissions.IsAuthenticated, IsBusinessHours]
+
+
+# ============================================
+# 12. YANGI: Conditional Limits
+# ============================================
+
+class HasCreationLimit(permissions.BasePermission):
+    """
+    User limitga qarab permission
+    - Premium: cheksiz
+    - Oddiy: 10 ta kitob
+    """
+    def has_permission(self, request, view):
+        if request.method != 'POST':
+            return True
+            
+        # Premium userlar cheksiz
+        if getattr(request.user, 'is_premium', False):
+            return True
+        
+        # Oddiy userlar: 10 ta limit
+        count = Book.objects.filter(owner=request.user).count()
+        if count >= 10:
+            self.message = "Limit tugadi! Premium bo'ling (10/10)"
+            return False
+        
+        return True
+
+
+class BookView_WithLimit(viewsets.ModelViewSet):
+    """
+    Create uchun limit bor (IsAuthenticated AND HasCreationLimit)
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [permissions.IsAuthenticated, HasCreationLimit]
+    
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+# ============================================
+# 13. YANGI: Advanced Action-based
+# ============================================
+
+class BookView_AdvancedActions(viewsets.ModelViewSet):
+    """
+    Har bir action uchun murakkab permission kombinatsiyalari
+    """
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    
+    def get_permissions(self):
+        """
+        Action asosida turli xil permissionlar
+        """
+        if self.action == 'list':
+            # List - hammaga
+            return [permissions.AllowAny()]
+            
+        elif self.action == 'retrieve':
+            # Detail - published yoki owner
+            return [IsPublic | IsOwner]
+            
+        elif self.action == 'create':
+            # Create - authenticated VA limit check
+            return [permissions.IsAuthenticated(), HasCreationLimit()]
+            
+        elif self.action in ['update', 'partial_update']:
+            # Update - owner yoki admin
+            return [IsOwner | permissions.IsAdminUser]
+            
+        elif self.action == 'destroy':
+            # Delete - faqat admin
+            return [permissions.IsAdminUser()]
+            
+        elif self.action == 'publish':
+            # Publish - owner yoki editor
+            return [IsOwner | IsEditor]
+            
+        elif self.action == 'premium_only':
+            # Premium action - faqat premium
+            return [IsPremiumUser()]
+            
+        # Default
+        return [permissions.IsAuthenticated()]
+    
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        """
+        Kitobni publish qilish
+        """
+        book = self.get_object()
+        book.published = True
+        book.save()
+        return Response({'status': 'published'})
+    
+    @action(detail=False, methods=['get'])
+    def premium_only(self, request):
+        """
+        Faqat premium userlar uchun
+        """
+        return Response({'message': 'Premium content!'})
+
+
+# ============================================
+# Best Practices
 # ============================================
 
 """
@@ -256,5 +423,10 @@ class BookView_Actions(viewsets.ModelViewSet):
     - owner
     - staff
     - published/unpublished
-✔ Permissionlar qisqa bo‘lsin → ko'p mantiq View ichida emas, permission classlarda bo‘lsin
+    - premium/regular
+    - business hours
+✔ Permissionlar qisqa bo'lsin → ko'p mantiq View ichida emas, permission classlarda bo'lsin
+✔ Custom message berib qo'ying: self.message = "..."
+✔ Time-based, role-based, limit-based permissionlarni birlashtirishingiz mumkin
+✔ action_permissions dictionary pattern juda qulay va o'qilishi oson
 """
