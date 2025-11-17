@@ -17,8 +17,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
 
-from .models import Book
-from .serializers import (
+from books.models import Book
+from books.serializers import (
     # Validation serializers (old lessons)
     BookFieldValidationSerializer,
     BookObjectValidationSerializer,
@@ -31,7 +31,7 @@ from .serializers import (
     # Current serializer
     BookSerializer,
 )
-from .permissions import (
+from books.permissions import (
     IsOwnerOrReadOnly,
     IsPublishedOrOwner,
     IsOwnerOrAdmin,
