@@ -12,9 +12,9 @@ from .validators import (
     YearRangeValidator
 )
 from datetime import date
-
 from rest_framework import serializers
-from .models import Book
+from django.db import transaction
+from .models import Book, Author, Genre
 
 
 class BookSerializer(serializers.ModelSerializer):
@@ -691,3 +691,270 @@ class BookHomeworkObjectValidationSerializer(serializers.ModelSerializer):
                 })
         
         return data
+    
+
+# ==================== GENRE SERIALIZERS ====================
+# Lesson 17 uchun
+
+class GenreSerializer(serializers.ModelSerializer):
+    """Genre serializer - basic"""
+    
+    class Meta:
+        model = Genre
+        fields = ['id', 'name', 'description']
+
+
+class GenreDetailSerializer(serializers.ModelSerializer):
+    """Genre detail serializer - kitoblar soni bilan"""
+    total_books = serializers.IntegerField(source='books.count', read_only=True)
+    
+    class Meta:
+        model = Genre
+        fields = ['id', 'name', 'description', 'total_books', 'created_at']
+
+
+# ==================== AUTHOR SERIALIZERS ====================
+
+class AuthorSerializer(serializers.ModelSerializer):
+    """Author serializer - basic"""
+    
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'email', 'bio', 'birth_date']
+
+
+class AuthorDetailSerializer(serializers.ModelSerializer):
+    """Author detail serializer - barcha kitoblari bilan"""
+    books = serializers.SerializerMethodField()
+    total_books = serializers.IntegerField(source='books.count', read_only=True)
+    average_price = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Author
+        fields = [
+            'id', 'name', 'email', 'bio', 'birth_date', 
+            'books', 'total_books', 'average_price', 'created_at'
+        ]
+    
+    def get_books(self, obj):
+        """Author'ning barcha kitoblari"""
+        books = obj.books.all()
+        return [{
+            'id': book.id,
+            'title': book.title,
+            'subtitle': book.subtitle,
+            'isbn_number': book.isbn_number,
+            'price': str(book.price),
+            'published': book.published
+        } for book in books]
+    
+    def get_average_price(self, obj):
+        """O'rtacha kitob narxi"""
+        from django.db.models import Avg
+        result = obj.books.aggregate(Avg('price'))
+        avg = result['price__avg']
+        return round(float(avg), 2) if avg else 0.0
+
+
+# ==================== BOOK SERIALIZERS ====================
+
+class BookSimpleSerializer(serializers.ModelSerializer):
+    """Book serializer - oddiy (nested'siz)"""
+    
+    class Meta:
+        model = Book
+        fields = ['id', 'title', 'subtitle', 'isbn_number', 'price', 'pages', 'published']
+
+
+class BookListSerializer(serializers.ModelSerializer):
+    """Book list serializer - nested author va genres"""
+    author = AuthorSerializer(read_only=True)
+    genres = GenreSerializer(many=True, read_only=True)
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+    
+    class Meta:
+        model = Book
+        fields = [
+            'id', 'title', 'subtitle', 'author', 'genres',
+            'isbn_number', 'price', 'pages', 'language',
+            'published', 'published_date', 'owner_username'
+        ]
+
+
+class BookDetailSerializer(serializers.ModelSerializer):
+    """Book detail serializer - to'liq ma'lumot"""
+    author = AuthorSerializer(read_only=True)
+    genres = GenreSerializer(many=True, read_only=True)
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+    
+    class Meta:
+        model = Book
+        fields = [
+            'id', 'title', 'subtitle', 'author', 'genres',
+            'isbn_number', 'price', 'pages', 'language',
+            'publisher', 'published', 'published_date',
+            'owner_username', 'created_at', 'updated_at'
+        ]
+
+
+class BookCreateUpdateSerializer(serializers.ModelSerializer):
+    """Book create/update serializer"""
+    author_id = serializers.PrimaryKeyRelatedField(
+        queryset=Author.objects.all(),
+        source='author',
+        write_only=True,
+        required=False
+    )
+    genre_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Genre.objects.all(),
+        source='genres',
+        write_only=True,
+        required=False
+    )
+    
+    # Read uchun nested
+    author = AuthorSerializer(read_only=True)
+    genres = GenreSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Book
+        fields = [
+            'id', 'title', 'subtitle', 'author_id', 'author',
+            'genre_ids', 'genres', 'isbn_number', 'price',
+            'pages', 'language', 'publisher', 'published',
+            'published_date'
+        ]
+    
+    def validate_isbn_number(self, value):
+        """ISBN validation"""
+        if len(value) != 13:
+            raise serializers.ValidationError("ISBN 13 ta belgidan iborat bo'lishi kerak")
+        if not value.startswith('978'):
+            raise serializers.ValidationError("ISBN 978 bilan boshlanishi kerak")
+        return value
+    
+    def validate_price(self, value):
+        """Narx validation"""
+        if value <= 0:
+            raise serializers.ValidationError("Narx musbat son bo'lishi kerak")
+        if value > 1000:
+            raise serializers.ValidationError("Narx 1000 dan oshmasligi kerak")
+        return value
+    
+    def validate_pages(self, value):
+        """Pages validation"""
+        if value < 1:
+            raise serializers.ValidationError("Sahifalar soni kamida 1 bo'lishi kerak")
+        if value > 10000:
+            raise serializers.ValidationError("Sahifalar soni 10000 dan oshmasligi kerak")
+        return value
+
+
+# ==================== WRITABLE NESTED SERIALIZERS ====================
+
+class BookNestedCreateSerializer(serializers.ModelSerializer):
+    """Nested book serializer for creating with author"""
+    genre_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Genre.objects.all(),
+        source='genres',
+        required=False
+    )
+    
+    class Meta:
+        model = Book
+        fields = [
+            'title', 'subtitle', 'isbn_number', 'price',
+            'pages', 'language', 'publisher', 'published',
+            'published_date', 'genre_ids'
+        ]
+    
+    def validate_isbn_number(self, value):
+        if len(value) != 13:
+            raise serializers.ValidationError("ISBN 13 ta belgidan iborat bo'lishi kerak")
+        if not value.startswith('978'):
+            raise serializers.ValidationError("ISBN 978 bilan boshlanishi kerak")
+        return value
+
+
+class AuthorWithBooksCreateSerializer(serializers.ModelSerializer):
+    """Author yaratish - kitoblari bilan birga"""
+    books = BookNestedCreateSerializer(many=True, required=False)
+    
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'email', 'bio', 'birth_date', 'books']
+    
+    def validate_books(self, value):
+        """Kitoblar ro'yxati validation"""
+        if len(value) > 10:
+            raise serializers.ValidationError("Bir marta 10 tadan ko'p kitob qo'shib bo'lmaydi")
+        
+        # ISBN takrorlanmasligi
+        isbns = [book['isbn_number'] for book in value]
+        if len(isbns) != len(set(isbns)):
+            raise serializers.ValidationError("ISBN'lar takrorlanmasligi kerak")
+        
+        return value
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        """Author va kitoblarni yaratish"""
+        books_data = validated_data.pop('books', [])
+        author = Author.objects.create(**validated_data)
+        
+        # Request'dan owner ni olish
+        request = self.context.get('request')
+        owner = request.user if request else None
+        
+        for book_data in books_data:
+            genres = book_data.pop('genres', [])
+            book = Book.objects.create(author=author, owner=owner, **book_data)
+            if genres:
+                book.genres.set(genres)
+        
+        return author
+    
+    def to_representation(self, instance):
+        """Response uchun detail serializer"""
+        return AuthorDetailSerializer(instance).data
+
+
+class AuthorWithBooksUpdateSerializer(serializers.ModelSerializer):
+    """Author yangilash - kitoblari bilan"""
+    books = BookNestedCreateSerializer(many=True, required=False)
+    
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'email', 'bio', 'birth_date', 'books']
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        """Yangilash"""
+        books_data = validated_data.pop('books', None)
+        
+        # Author ma'lumotlarini yangilash
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Kitoblarni yangilash (optional)
+        if books_data is not None:
+            # Eski kitoblarni o'chirish
+            instance.books.all().delete()
+            
+            # Yangi kitoblarni yaratish
+            request = self.context.get('request')
+            owner = request.user if request else None
+            
+            for book_data in books_data:
+                genres = book_data.pop('genres', [])
+                book = Book.objects.create(author=instance, owner=owner, **book_data)
+                if genres:
+                    book.genres.set(genres)
+        
+        return instance
+    
+    def to_representation(self, instance):
+        return AuthorDetailSerializer(instance).data
