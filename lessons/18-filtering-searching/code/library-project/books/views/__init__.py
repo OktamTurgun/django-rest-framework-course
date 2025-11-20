@@ -3,8 +3,10 @@ Books app views
 Import barcha viewlarni bu yerda qilamiz
 """
 
-# Lesson 17 views
+# Book views
 from .book_views import BookListCreateView, BookDetailView
+
+# Author views
 from .author_views import (
     AuthorListView,
     AuthorDetailView,
@@ -12,13 +14,9 @@ from .author_views import (
     AuthorUpdateView,
     AuthorDeleteView
 )
+
+# Genre views
 from .genre_views import GenreListCreateView, GenreDetailView
-
-# Old views (agar kerak bo'lsa)
-# from .old_views import OldBookListView, OldBookDetailView
-
-# ViewSet views (agar kerak bo'lsa)
-# from .viewset_views import BookViewSet
 
 __all__ = [
     # Book views
