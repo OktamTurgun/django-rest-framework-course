@@ -1,5 +1,5 @@
 """
-Author views with filtering and searching - Lesson 18
+Author views with filtering, searching, and pagination - Lesson 18 & 19
 """
 
 from rest_framework import generics
@@ -16,6 +16,7 @@ from books.serializers import (
     AuthorWithBooksUpdateSerializer,
 )
 from books.filters import AuthorFilter
+from books.pagination import MediumResultsSetPagination
 
 
 class AuthorListView(generics.ListAPIView):

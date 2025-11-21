@@ -4,7 +4,7 @@ Import barcha viewlarni bu yerda qilamiz
 """
 
 # Book views
-from .book_views import BookListCreateView, BookDetailView
+from .book_views import BookListCreateView, BookDetailView, BookFeedView  # BookFeedView qo'shildi
 
 # Author views
 from .author_views import (
@@ -22,6 +22,7 @@ __all__ = [
     # Book views
     'BookListCreateView',
     'BookDetailView',
+    'BookFeedView',  # Qo'shildi
     
     # Author views
     'AuthorListView',
