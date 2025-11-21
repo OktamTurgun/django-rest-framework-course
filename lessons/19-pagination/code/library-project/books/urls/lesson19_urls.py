@@ -1,8 +1,9 @@
-"""Lesson 17 URLs - Nested Serializers"""
+"""Lesson 17-19 URLs - Nested Serializers, Filtering, Pagination"""
 from django.urls import path
 from books.views import (
     BookListCreateView,
     BookDetailView,
+    BookFeedView,  # Yangi
     AuthorListView,
     AuthorDetailView,
     AuthorCreateView,
@@ -16,6 +17,7 @@ urlpatterns = [
     # Book endpoints
     path('books/', BookListCreateView.as_view(), name='book-list'),
     path('books/<int:pk>/', BookDetailView.as_view(), name='book-detail'),
+    path('books/feed/', BookFeedView.as_view(), name='book-feed'),  # Yangi
     
     # Author endpoints
     path('authors/', AuthorListView.as_view(), name='author-list'),

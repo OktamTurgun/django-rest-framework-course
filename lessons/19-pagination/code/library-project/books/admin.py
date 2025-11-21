@@ -48,7 +48,7 @@ class GenreAdmin(admin.ModelAdmin):
 class BookAdmin(admin.ModelAdmin):
     """Book admin panel"""
     list_display = [
-        'title', 'author', 'price', 'pages', 
+        'title', 'id', 'author', 'price', 'pages', 
         'published', 'published_date', 'owner', 'created_at'
     ]
     list_filter = ['author', 'genres', 'published', 'language', 'published_date', 'created_at']

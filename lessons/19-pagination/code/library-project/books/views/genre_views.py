@@ -1,5 +1,5 @@
 """
-Genre views with filtering and searching - Lesson 18
+Genre views with filtering, searching, and pagination - Lesson 18 & 19
 """
 
 from rest_framework import generics
@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from books.models import Genre
 from books.serializers import GenreSerializer, GenreDetailSerializer
 from books.filters import GenreFilter
+from books.pagination import SmallResultsSetPagination
 
 
 class GenreListCreateView(generics.ListCreateAPIView):

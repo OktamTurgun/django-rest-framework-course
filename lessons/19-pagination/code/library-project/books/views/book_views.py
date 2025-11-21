@@ -1,5 +1,5 @@
 """
-Book views with filtering and searching - Lesson 18
+Book views with filtering, searching, and pagination - Lesson 18 & 19
 """
 
 from rest_framework import generics
@@ -14,6 +14,7 @@ from books.serializers import (
     BookCreateUpdateSerializer,
 )
 from books.filters import BookFilter
+from books.pagination import StandardResultsSetPagination, BookFeedPagination
 
 
 class BookListCreateView(generics.ListCreateAPIView):
@@ -21,18 +22,18 @@ class BookListCreateView(generics.ListCreateAPIView):
     GET: Barcha kitoblar ro'yxati
     POST: Yangi kitob yaratish
     
-    Filters:
-    - DjangoFilterBackend: title, price range, date range, author, genres, etc.
-    - SearchFilter: title, subtitle, author__name, publisher
-    - OrderingFilter: price, published_date, title, pages
+    Features:
+    - Pagination: 10 items per page (customizable)
+    - Filters: DjangoFilterBackend
+    - Search: title, subtitle, author__name, publisher
+    - Ordering: price, published_date, title, pages
     
     Examples:
     /api/books/
-    /api/books/?search=django
-    /api/books/?ordering=-published_date
-    /api/books/?author=1&published=true
-    /api/books/?min_price=20&max_price=50
-    /api/books/?search=python&ordering=price&published_year=2024
+    /api/books/?page=2
+    /api/books/?page_size=20
+    /api/books/?search=django&page=2
+    /api/books/?author=1&published=true&ordering=-price&page=3
     """
     permission_classes = [IsAuthenticatedOrReadOnly]
     
@@ -48,6 +49,9 @@ class BookListCreateView(generics.ListCreateAPIView):
     # OrderingFilter
     ordering_fields = ['price', 'published_date', 'title', 'pages', 'created_at']
     ordering = ['-published_date']  # Default ordering
+    
+    # Pagination
+    pagination_class = StandardResultsSetPagination
     
     def get_queryset(self):
         """Optimized queryset"""
@@ -81,3 +85,29 @@ class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ['PUT', 'PATCH']:
             return BookCreateUpdateSerializer
         return BookDetailSerializer
+
+
+class BookFeedView(generics.ListAPIView):
+    """
+    Book feed - cursor pagination bilan
+    Real-time yangi kitoblar feed'i
+    
+    Features:
+    - Cursor pagination (high performance)
+    - Real-time updates
+    - Infinite scroll support
+    - Only published books
+    
+    Usage:
+    GET /api/books/feed/
+    GET /api/books/feed/?cursor=cD0yMDI0...
+    """
+    serializer_class = BookListSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = BookFeedPagination
+    
+    def get_queryset(self):
+        """Faqat published kitoblar, optimized"""
+        return Book.objects.filter(
+            published=True
+        ).select_related('author', 'owner').prefetch_related('genres')
