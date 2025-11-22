@@ -87,6 +87,8 @@ class Book(models.Model):
         related_name='books',
         help_text='User who created this book'
     )
+
+    available_copies = models.IntegerField(default=5, validators=[MinValueValidator(0)])
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -100,3 +102,21 @@ class Book(models.Model):
         if self.author:
             return f"{self.title} by {self.author.name}"
         return self.title
+    
+# ==================== YANGI MODEL 20-Throttling ====================
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    is_premium = models.BooleanField(default=False)
+    membership_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('free', 'Free'),
+            ('basic', 'Basic'),
+            ('premium', 'Premium')
+        ],
+        default='free'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.membership_type}"

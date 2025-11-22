@@ -78,6 +78,20 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/hour',
+        'user': '100/hour',
+        'membership': '100/hour',
+        'books_list': '50/hour',
+        'books_create': '5/hour',
+        'books_borrow': '5/day',
+        'search': '30/minute',
+        'premium': '1000/hour',
+    }
 }
 
 # SPECTACULAR_SETTINGS
@@ -201,3 +215,10 @@ SESSION_COOKIE_SECURE = False  # Production'da True qiling
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Development uchun
 SITE_ID = 1
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}

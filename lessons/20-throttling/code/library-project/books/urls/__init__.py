@@ -7,8 +7,12 @@ from django.urls import path, include
 app_name = 'books'
 
 urlpatterns = [
+  
+    # Lesson 20 URLs (Throttling) - YANGI!
+    path('', include('books.urls.lesson20_urls')),
+
     # Lesson 17 URLs (asosiy)
-    path('', include('books.urls.lesson19_urls')),
+    # path('', include('books.urls.lesson19_urls')),
     
     # Old URLs (agar kerak bo'lsa)
     # path('old/', include('books.urls.old_urls')),
