@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 from decouple import config, Csv
 from datetime import timedelta
@@ -174,6 +175,14 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# === MEDIA FILES Configuration ===
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# File upload limits
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  
 
 # === DEFAULT PRIMARY KEY FIELD TYPE ===
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
