@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .models import Book
+from .models import Book, UserProfile
 from .validators import (
     validate_isbn_format,
     validate_not_digits_only,
@@ -15,6 +15,8 @@ from datetime import date
 from rest_framework import serializers
 from django.db import transaction
 from .models import Book, Author, Genre
+
+from django.core.validators import FileExtensionValidator
 
 
 class BookSerializer(serializers.ModelSerializer):
@@ -958,3 +960,119 @@ class AuthorWithBooksUpdateSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         return AuthorDetailSerializer(instance).data
+    
+# books/serializers.py
+# === Lesson 21: file upload uchun serilizerlar ===
+class BookCoverSerializer(serializers.ModelSerializer):
+    """
+    Book cover upload uchun serializer
+    """
+    cover_url = serializers.SerializerMethodField()
+    cover_thumbnail_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Book
+        fields = [
+            'id',
+            'title',
+            'cover_image',
+            'cover_url',
+            'cover_thumbnail_url'
+        ]
+        read_only_fields = ['cover_thumbnail_url']
+    
+    def get_cover_url(self, obj):
+        if obj.cover_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.cover_image.url)
+            return obj.cover_image.url
+        return None
+    
+    def get_cover_thumbnail_url(self, obj):
+        if obj.cover_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.cover_thumbnail.url)
+            return obj.cover_thumbnail.url
+        return None
+    
+    def validate_cover_image(self, value):
+        """
+        Cover image validation
+        """
+        # Size check (2MB)
+        max_size = 2 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                f'Image size cannot exceed 2MB. Current: {value.size / (1024 * 1024):.2f}MB'
+            )
+        
+        # Dimension check
+        from PIL import Image
+        img = Image.open(value)
+        width, height = img.size
+        
+        if width < 200 or height < 300:
+            raise serializers.ValidationError(
+                f'Image must be at least 200x300 pixels. Current: {width}x{height}'
+            )
+        
+        return value
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    User profile serializer - avatar bilan
+    """
+    username = serializers.CharField(source='user.username', read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+    avatar_thumbnail_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id',
+            'username',
+            'bio',
+            'avatar',
+            'avatar_url',
+            'avatar_thumbnail_url',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+    
+    def get_avatar_thumbnail_url(self, obj):
+        if obj.avatar_thumbnail:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar_thumbnail.url)
+            return obj.avatar_thumbnail.url
+        return None
+    
+    def validate_avatar(self, value):
+        """
+        Avatar validation
+        """
+        # Size (2MB)
+        max_size = 2 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError('Avatar too large (max 2MB)')
+        
+        # Format
+        from PIL import Image
+        img = Image.open(value)
+        
+        if img.format not in ['JPEG', 'PNG', 'GIF']:
+            raise serializers.ValidationError('Only JPEG, PNG, GIF allowed')
+        
+        return value
