@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     'dj_rest_auth.registration',
     "django_filters",
+    "debug_toolbar",
 
     # Local apps
     "books.apps.BooksConfig",
@@ -114,6 +115,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -231,3 +233,5 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
+INTERNAL_IPS = ['127.0.0.1']

@@ -1,5 +1,5 @@
 """
-Book views with filtering, searching, and pagination - Lesson 18 & 19
+Book views with filtering, searching, pagination and optimization - Lesson 18, 19, 22
 """
 
 from rest_framework import generics
@@ -27,6 +27,7 @@ class BookListCreateView(generics.ListCreateAPIView):
     - Filters: DjangoFilterBackend
     - Search: title, subtitle, author__name, publisher
     - Ordering: price, published_date, title, pages
+    - Query Optimization: select_related, prefetch_related (Lesson 22)
     
     Examples:
     /api/books/
@@ -52,10 +53,18 @@ class BookListCreateView(generics.ListCreateAPIView):
     
     # Pagination
     pagination_class = StandardResultsSetPagination
-    
+
     def get_queryset(self):
-        """Optimized queryset"""
-        return Book.objects.select_related('author', 'owner').prefetch_related('genres')
+        """
+        Optimized queryset
+        Lesson 22: Query Optimization
+        """
+        return Book.objects.select_related(
+            'author',
+            'owner'
+        ).prefetch_related(
+            'genres'
+        )
     
     def get_serializer_class(self):
         """POST uchun boshqa serializer"""
@@ -73,12 +82,22 @@ class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
     GET: Bitta kitob detali
     PUT/PATCH: Kitobni yangilash
     DELETE: Kitobni o'chirish
+    
+    Lesson 22: Optimized with select_related and prefetch_related
     """
     permission_classes = [IsAuthenticatedOrReadOnly]
     
     def get_queryset(self):
-        """Optimized queryset"""
-        return Book.objects.select_related('author', 'owner').prefetch_related('genres')
+        """
+        Optimized queryset
+        Lesson 22: Query Optimization
+        """
+        return Book.objects.select_related(
+            'author',
+            'owner'
+        ).prefetch_related(
+            'genres'
+        )
     
     def get_serializer_class(self):
         """GET va PUT/PATCH uchun turli serializerlar"""
@@ -97,6 +116,7 @@ class BookFeedView(generics.ListAPIView):
     - Real-time updates
     - Infinite scroll support
     - Only published books
+    - Query Optimization (Lesson 22)
     
     Usage:
     GET /api/books/feed/
@@ -107,7 +127,15 @@ class BookFeedView(generics.ListAPIView):
     pagination_class = BookFeedPagination
     
     def get_queryset(self):
-        """Faqat published kitoblar, optimized"""
+        """
+        Faqat published kitoblar, optimized
+        Lesson 22: Query Optimization
+        """
         return Book.objects.filter(
             published=True
-        ).select_related('author', 'owner').prefetch_related('genres')
+        ).select_related(
+            'author',
+            'owner'
+        ).prefetch_related(
+            'genres'
+        )
