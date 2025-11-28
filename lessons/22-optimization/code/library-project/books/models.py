@@ -4,7 +4,6 @@ from PIL import Image
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
-
 from django.core.files.uploadedfile import InMemoryUploadedFile
 
 class Author(models.Model):
@@ -110,11 +109,25 @@ class Book(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
+        indexes = [
+            # Single field indexes
+            models.Index(fields=['title'], name='book_title_idx'),
+            models.Index(fields=['published_date'], name='book_pub_date_idx'),
+            models.Index(fields=['available_copies'], name='book_avail_idx'),
+            
+            # Composite indexes
+            models.Index(fields=['author', 'published_date'], name='book_author_date_idx'),
+            
+            # Ordering indexes
+            models.Index(fields=['-published_date'], name='book_date_desc_idx'),
+            models.Index(fields=['-created_at'], name='book_created_desc_idx'),
+        ]
         ordering = ['-created_at']
         verbose_name = 'Book'
         verbose_name_plural = 'Books'
+        
     
     def __str__(self):
         if self.author:
