@@ -769,7 +769,10 @@ class BookSimpleSerializer(serializers.ModelSerializer):
 
 
 class BookListSerializer(serializers.ModelSerializer):
-    """Book list serializer - nested author va genres"""
+    """
+    Book list serializer - OPTIMIZED!
+    Nested serializer'lar bilan
+    """
     author = AuthorSerializer(read_only=True)
     genres = GenreSerializer(many=True, read_only=True)
     owner_username = serializers.CharField(source='owner.username', read_only=True)
@@ -777,11 +780,12 @@ class BookListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = [
-            'id', 'title', 'subtitle', 'author', 'genres',
+            'id', 'title', 'subtitle', 
+            'author',           # Nested - optimized bilan ishlaydi
+            'genres',           # Nested - optimized bilan ishlaydi
             'isbn_number', 'price', 'pages', 'language',
             'published', 'published_date', 'owner_username'
         ]
-
 
 class BookDetailSerializer(serializers.ModelSerializer):
     """Book detail serializer - to'liq ma'lumot"""
