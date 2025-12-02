@@ -51,8 +51,9 @@ class MembershipThrottle(SimpleRateThrottle):
         if user.is_staff:
             return None
         
-        # Premium member (Profile modelida is_premium field bo'lsa)
-        if hasattr(user, 'profile') and user.profile.is_premium:
+        # Premium member (Books app uses books_profile related_name)
+        books_profile = getattr(user, 'books_profile', None)
+        if books_profile and getattr(books_profile, 'is_premium', False):
             return '1000/hour'
         
         # Oddiy user

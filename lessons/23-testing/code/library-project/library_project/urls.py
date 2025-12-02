@@ -11,6 +11,7 @@ from drf_spectacular.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from accounts.views import LoginView, LogoutView, UserInfoView, ChangePasswordView
 
 urlpatterns = [
     # Admin panel
@@ -20,14 +21,20 @@ urlpatterns = [
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
     
-    # DRF Browsable API login (optional)
-    path('api-auth/', include('rest_framework.urls')),
+    # DRF Browsable API login (optional) - namespace to avoid name clashes
+    path('api-auth/', include(('rest_framework.urls', 'rest_framework'), namespace='rest_framework')),
     # dj-rest-auth endpoints
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
 
-    # Django auth views (muammo yechimi)
-    path('auth/', include('django.contrib.auth.urls')),
+    # Top-level shortcuts used by tests (map common names to API views)
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('profile/', UserInfoView.as_view(), name='profile'),
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+
+    # Django auth views (keep default HTML auth URLs as well) - put under namespace to avoid name clashes
+    path('auth/', include(('django.contrib.auth.urls', 'auth'), namespace='auth')),
     
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

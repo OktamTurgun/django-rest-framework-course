@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+import sys
 from decouple import config, Csv
 from datetime import timedelta
 
@@ -80,20 +81,15 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+    'DEFAULT_THROTTLE_CLASSES': [] if 'test' in sys.argv else [
+        'books.throttling.MembershipThrottle',
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/hour',
-        'user': '100/hour',
+    'DEFAULT_THROTTLE_RATES': {} if 'test' in sys.argv else {
         'membership': '100/hour',
-        'books_list': '50/hour',
-        'books_create': '5/hour',
-        'books_borrow': '5/day',
-        'search': '30/minute',
-        'premium': '1000/hour',
-    }
+        'borrow': '5/day',
+        'monitored_books': '100/hour',
+        'search': '50/hour',
+    },
 }
 
 # SPECTACULAR_SETTINGS

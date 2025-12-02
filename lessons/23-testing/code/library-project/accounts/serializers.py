@@ -24,7 +24,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'password2')
+        fields = ('id', 'username', 'email', 'password', 'password2', 'first_name', 'last_name')
         extra_kwargs = {
             'email': {'required': True}  # Emailni majburiy qilamiz
         }
@@ -55,14 +55,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         """
         # password2 ni olib tashlaymiz (kerak emas)
         validated_data.pop('password2')
-        
+        # Extract optional names
+        first_name = validated_data.pop('first_name', '')
+        last_name = validated_data.pop('last_name', '')
+
         # Foydalanuvchini yaratamiz
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data['email'],
+            email=validated_data.get('email', ''),
             password=validated_data['password']
         )
-        
+
+        # Set additional name fields
+        if first_name:
+            user.first_name = first_name
+        if last_name:
+            user.last_name = last_name
+        user.save()
+
         return user
 
 

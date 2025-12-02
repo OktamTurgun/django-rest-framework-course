@@ -27,7 +27,7 @@ class Author(models.Model):
 
 class Genre(models.Model):
     """Janr modeli"""
-    name = models.CharField(max_length= 50, unique=True)
+    name = models.CharField(max_length= 50)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -179,7 +179,7 @@ class Book(models.Model):
     
 # ==================== YANGI MODEL 20-Throttling ====================
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='books_profile')
     bio = models.TextField(blank=True)
     is_premium = models.BooleanField(default=False)
     avatar = models.ImageField(

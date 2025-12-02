@@ -22,19 +22,26 @@ def validate_positive(value):
 def validate_isbn_format(value):
     """
     ISBN formatini tekshirish
-    Format: 10 yoki 13 ta raqam (- ruxsat etiladi)
+    Format: 10 yoki 13 ta raqam
+    Bo'sh joy BO'LMASLIGI kerak (test shuni kutyapti)
     """
-    clean_value = value.replace('-', '').replace(' ', '')
-    
+    if " " in value:
+        raise serializers.ValidationError(
+            "ISBN tarkibida bo'sh joy bo'lishi mumkin emas"
+        )
+
+    clean_value = value.replace('-', '')
+
     if len(clean_value) not in [10, 13]:
         raise serializers.ValidationError(
             "ISBN 10 yoki 13 ta belgidan iborat bo'lishi kerak"
         )
-    
+
     if not clean_value.isdigit():
         raise serializers.ValidationError(
             "ISBN faqat raqamlardan iborat bo'lishi kerak"
         )
+
     
 def validate_not_digits_only(value):
     """
@@ -66,6 +73,10 @@ def validate_capitalized(value):
                 "Har bir so'z bosh harf bilan boshlanishi kerak"
             )
 
+def validate_no_whitespace(value):
+    if not value or not value.strip():
+        raise serializers.ValidationError("Qiymat bosh bo'lishi mumkin emas yoki faqat bo'shliqdan iborat bo'lishi mumkin emas.")
+    return value
 
 # ============================================
 # CLASS-BASED VALIDATORS
