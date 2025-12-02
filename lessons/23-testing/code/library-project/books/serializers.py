@@ -7,6 +7,7 @@ from .validators import (
     validate_not_digits_only,
     validate_no_special_chars,
     validate_capitalized,
+    validate_no_whitespace,
     PriceRangeValidator,
     MinWordsValidator,
     YearRangeValidator
@@ -272,7 +273,8 @@ class BookCustomValidatorsSerializer(serializers.ModelSerializer):
         max_length=200,
         validators=[
             validate_no_special_chars,
-            MinWordsValidator(2)
+            MinWordsValidator(2),
+            validate_no_whitespace,
         ]
     )
     
@@ -285,6 +287,7 @@ class BookCustomValidatorsSerializer(serializers.ModelSerializer):
         max_length=17,
         validators=[
             validate_isbn_format,
+            validate_no_whitespace,
             UniqueValidator(
                 queryset=Book.objects.all(),
                 message='Bu ISBN allaqachon mavjud'
@@ -823,6 +826,16 @@ class BookCreateUpdateSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
     genres = GenreSerializer(many=True, read_only=True)
     
+    # ✅ validators qo‘shildi
+    title = serializers.CharField(
+        validators=[validate_no_whitespace]
+    )
+    subtitle = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        validators=[validate_no_whitespace]
+    )
+    
     class Meta:
         model = Book
         fields = [
@@ -834,6 +847,8 @@ class BookCreateUpdateSerializer(serializers.ModelSerializer):
     
     def validate_isbn_number(self, value):
         """ISBN validation"""
+        # testda bo'sh joyni ham tekshiradi
+        validate_isbn_format(value)
         if len(value) != 13:
             raise serializers.ValidationError("ISBN 13 ta belgidan iborat bo'lishi kerak")
         if not value.startswith('978'):
@@ -842,10 +857,7 @@ class BookCreateUpdateSerializer(serializers.ModelSerializer):
     
     def validate_price(self, value):
         """Narx validation"""
-        if value <= 0:
-            raise serializers.ValidationError("Narx musbat son bo'lishi kerak")
-        if value > 1000:
-            raise serializers.ValidationError("Narx 1000 dan oshmasligi kerak")
+        PriceRangeValidator(1, 1000)(value)  # validators.py dan
         return value
     
     def validate_pages(self, value):
@@ -855,7 +867,6 @@ class BookCreateUpdateSerializer(serializers.ModelSerializer):
         if value > 10000:
             raise serializers.ValidationError("Sahifalar soni 10000 dan oshmasligi kerak")
         return value
-
 
 # ==================== WRITABLE NESTED SERIALIZERS ====================
 

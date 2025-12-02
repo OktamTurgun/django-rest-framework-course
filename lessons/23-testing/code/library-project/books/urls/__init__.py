@@ -16,6 +16,9 @@ urlpatterns = [
     # Lesson 20 URLs (Throttling) - YANGI!
     # path('', include('books.urls.lesson20_urls')),
 
+    # Lesson 19 URLs (Filtering & Searching)
+    path('', include('books.urls.lesson19_urls')),
+
     # Lesson 17 URLs (asosiy)
     # path('', include('books.urls.lesson19_urls')),
     
