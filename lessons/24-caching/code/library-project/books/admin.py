@@ -1,74 +1,71 @@
+"""
+Books Admin - FIXED
+Faqat mavjud fieldlar bilan ishlaydi
+"""
 from django.contrib import admin
-from .models import Book, Author, Genre
+from books.models import Book, Author, Genre, UserProfile
 
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    """Author admin panel"""
-    list_display = ['name', 'email', 'birth_date', 'total_books', 'created_at']
-    list_filter = ['birth_date', 'created_at']
-    search_fields = ['name', 'email', 'bio']
+    """Author admin interface"""
+    list_display = ['name', 'email', 'birth_date', 'created_at']
+    search_fields = ['name', 'email']
+    list_filter = ['created_at']
     date_hierarchy = 'created_at'
-    readonly_fields = ['created_at', 'updated_at']
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'email', 'birth_date')
-        }),
-        ('Biography', {
-            'fields': ('bio',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    def total_books(self, obj):
-        """Jami kitoblar soni"""
-        return obj.books.count()
-    total_books.short_description = 'Total Books'
 
 
 @admin.register(Genre)
 class GenreAdmin(admin.ModelAdmin):
-    """Genre admin panel"""
-    list_display = ['name', 'total_books', 'created_at']
-    search_fields = ['name', 'description']
-    date_hierarchy = 'created_at'
-    readonly_fields = ['created_at']
-    
-    def total_books(self, obj):
-        """Jami kitoblar soni"""
-        return obj.books.count()
-    total_books.short_description = 'Total Books'
+    """Genre admin interface"""
+    list_display = ['name', 'created_at']
+    search_fields = ['name']
+    list_filter = ['created_at']
 
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    """Book admin panel"""
+    """Book admin interface - FIXED"""
+    
+    # Faqat mavjud fieldlar
     list_display = [
-        'title', 'id', 'author', 'price', 'pages', 
-        'published', 'published_date', 'owner', 'created_at'
+        'id',
+        'title',
+        'author',
+        'isbn_number',
+        'price',
+        'stock',
+        'published_date',  # 'published' emas, 'published_date'!
+        'created_at',
     ]
-    list_filter = ['author', 'genres', 'published', 'language', 'published_date', 'created_at']
-    search_fields = ['title', 'subtitle', 'isbn_number', 'author__name', 'publisher']
-    date_hierarchy = 'published_date'
-    filter_horizontal = ['genres']  # ManyToMany uchun yaxshi UI
+    
+    list_filter = [
+        'author',
+        'published_date', 
+        'created_at',
+    ]
+    
+    search_fields = [
+        'title',
+        'isbn_number',
+        'author__name',
+    ]
+    
+    filter_horizontal = ['genres']  # ManyToMany field
+    
+    date_hierarchy = 'created_at'
+    
     readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'subtitle', 'author', 'owner')
+            'fields': ('title', 'isbn_number', 'description', 'author')
         }),
-        ('Publication Details', {
-            'fields': ('isbn_number', 'publisher', 'published_date', 'published')
+        ('Details', {
+            'fields': ('pages', 'language', 'published_date', 'genres')
         }),
-        ('Content Details', {
-            'fields': ('pages', 'language', 'genres')
-        }),
-        ('Pricing', {
-            'fields': ('price',)
+        ('Pricing & Stock', {
+            'fields': ('price', 'stock')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -76,8 +73,39 @@ class BookAdmin(admin.ModelAdmin):
         }),
     )
     
-    # Automatically set owner to current user when creating
-    def save_model(self, request, obj, form, change):
-        if not change:  # Yangi obyekt yaratilayotgan bo'lsa
-            obj.owner = request.user
-        super().save_model(request, obj, form, change)
+    # Inline editing uchun
+    list_editable = ['price', 'stock']
+    
+    # Per page
+    list_per_page = 50
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    """User Profile admin interface"""
+    list_display = ['user', 'membership_type', 'is_premium', 'created_at']
+    list_filter = ['membership_type', 'is_premium', 'created_at']
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('User Info', {
+            'fields': ('user', 'bio')
+        }),
+        ('Membership', {
+            'fields': ('membership_type', 'is_premium')
+        }),
+        ('Avatar', {
+            'fields': ('avatar', 'avatar_thumbnail')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# Admin site customization
+admin.site.site_header = "Library Management Admin"
+admin.site.site_title = "Library Admin Portal"
+admin.site.index_title = "Welcome to Library Management System"

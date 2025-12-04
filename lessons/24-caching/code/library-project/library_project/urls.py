@@ -16,41 +16,64 @@ from accounts.views import LoginView, LogoutView, UserInfoView, ChangePasswordVi
 urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
-    
+
     # API endpoints
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
-    
-    # DRF Browsable API login (optional) - namespace to avoid name clashes
+
+    # DRF browsable API login
     path('api-auth/', include(('rest_framework.urls', 'rest_framework'), namespace='rest_framework')),
-    # dj-rest-auth endpoints
+
+    # dj-rest-auth
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
 
-    # Top-level shortcuts used by tests (map common names to API views)
+    # Shortcut URLs for testing
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', UserInfoView.as_view(), name='profile'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
-    # Django auth views (keep default HTML auth URLs as well) - put under namespace to avoid name clashes
+    # Default Django auth (HTML)
     path('auth/', include(('django.contrib.auth.urls', 'auth'), namespace='auth')),
-    
-    # API Documentation (Swagger & ReDoc)
+
+    # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # Lesson 24 caching URLs
+    path('api/lesson24/', include('books.urls.lesson24_urls')),
 ]
 
-# Development da media files serve qilish
-if settings.DEBUG:
-    urlpatterns += static(
-        settings.MEDIA_URL,
-        document_root=settings.MEDIA_ROOT
-    )
-
+# Development mode configuration
 if settings.DEBUG:
     import debug_toolbar
+
+    # Debug Toolbar
     urlpatterns = [
         path('__debug__/', include(debug_toolbar.urls)),
     ] + urlpatterns
+
+    # Static & Media files
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+"""
+Endi sizda quyidagi URL pattern'lar bor:
+
+Base URL: http://localhost:8000/api/lesson24/
+
+Endpoints:
+- GET    /api/lesson24/books/                    - Cached list
+- GET    /api/lesson24/books/1/                  - Cached detail
+- GET    /api/lesson24/books/search/?q=django    - Search
+- GET    /api/lesson24/books/statistics/         - Stats
+- GET    /api/lesson24/books/paginated/?page=1   - Pagination
+- POST   /api/lesson24/books/create/             - Create
+- PUT    /api/lesson24/books/1/update/           - Update
+- DELETE /api/lesson24/books/1/delete/           - Delete
+- GET    /api/lesson24/books/public/             - Public list
+- GET    /api/lesson24/cache/stats/              - Cache stats
+- POST   /api/lesson24/cache/clear/              - Clear cache
+"""
