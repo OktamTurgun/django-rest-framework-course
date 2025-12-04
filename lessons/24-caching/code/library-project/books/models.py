@@ -1,10 +1,13 @@
 from io import BytesIO
+from django.core.cache import cache
 import os
 from PIL import Image
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.dispatch import receiver
+from django.db.models.signals import post_save, post_delete
 
 class Author(models.Model):
     """Muallif modeli"""
@@ -42,141 +45,180 @@ class Genre(models.Model):
 
 # ==================== YANGILANGAN MODEL ====================
 
+"""
+Book model - FINAL FIXED VERSION
+Publisher field'i o'chirilgan, faqat Author va Genre bilan ishlaydi
+"""
+
 class Book(models.Model):
     """
-    Book model - YANGILANDI (Lesson 17)
-    
-    CLEAN START: Eski ma'lumotlar o'chiriladi, yangi tuzilma bilan boshlanadi
+    Book model with optimizations
     """
-    title = models.CharField(max_length=200)
-    subtitle = models.CharField(max_length=200, blank=True)
     
-    # YANGI: Author object (ForeignKey)
-    author = models.ForeignKey(
-        Author,
-        on_delete=models.SET_NULL,
-        related_name='books',
-        null=True,
-        blank=True,
-        help_text='Kitobning muallifi (Author object)',
-        verbose_name='Author'
+    # Basic fields
+    title = models.CharField(
+        max_length=200,
+        db_index=True
     )
-    
-    isbn_number = models.CharField(max_length=13, unique=True)
-    price = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        validators=[MinValueValidator(0)]
+    isbn_number = models.CharField(
+        max_length=13,
+        unique=True,
+        db_index=True
     )
-    pages = models.IntegerField(
-        validators=[MinValueValidator(1)]
-    )
+    description = models.TextField(blank=True, null=True)
+    pages = models.IntegerField(default=0)
     language = models.CharField(max_length=50, default='English')
-    published_date = models.DateField(null=True, blank=True)
-    publisher = models.CharField(max_length=100)
-    published = models.BooleanField(default=False)
     
-    # YANGI: Genres (ManyToMany)
-    genres = models.ManyToManyField(
-        Genre,
-        related_name='books',
-        blank=True,
-        help_text='Kitobning janrlari'
+    # Price and stock
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        db_index=True
     )
+    stock = models.IntegerField(default=0)
     
-    # Owner field (Lesson 16 dan)
-    owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='books',
-        help_text='User who created this book'
-    )
-
-    available_copies = models.IntegerField(default=5, validators=[MinValueValidator(0)])
-
-    # YANGI FIELDLAR! ✅
-    cover_image = models.ImageField(
-        upload_to='book_covers/',
+    # Dates
+    published_date = models.DateField(
         blank=True,
         null=True,
-        help_text='Book cover image'
+        db_index=True
     )
-    cover_thumbnail = models.ImageField(
-        upload_to='book_covers/thumbnails/',
-        blank=True,
-        null=True
-    )
-    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
+    # Foreign Keys
+    author = models.ForeignKey(
+        'Author',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='books',
+        db_index=True
+    )
+    
+    # Many-to-Many
+    genres = models.ManyToManyField(
+        'Genre',
+        related_name='books',
+        blank=True
+    )
+    
     class Meta:
-        indexes = [
-            # Single field indexes
-            models.Index(fields=['title'], name='book_title_idx'),
-            models.Index(fields=['published_date'], name='book_pub_date_idx'),
-            models.Index(fields=['available_copies'], name='book_avail_idx'),
-            
-            # Composite indexes
-            models.Index(fields=['author', 'published_date'], name='book_author_date_idx'),
-            
-            # Ordering indexes
-            models.Index(fields=['-published_date'], name='book_date_desc_idx'),
-            models.Index(fields=['-created_at'], name='book_created_desc_idx'),
-        ]
         ordering = ['-created_at']
+        
+        # Composite indexes
+        indexes = [
+            models.Index(fields=['title', 'author'], name='book_title_author_idx'),
+            models.Index(fields=['isbn_number', 'title'], name='book_isbn_title_idx'),
+            models.Index(fields=['published_date', 'author'], name='book_pub_author_idx'),
+            models.Index(fields=['-created_at', 'title'], name='book_created_title_idx'),
+            models.Index(fields=['price', 'title'], name='book_price_title_idx'),
+        ]
+        
         verbose_name = 'Book'
         verbose_name_plural = 'Books'
-        
     
     def __str__(self):
-        if self.author:
-            return f"{self.title} by {self.author.name}"
         return self.title
     
-    def save(self, *args, **kwargs):
-        """
-        Cover image yuklanganda thumbnail yaratish
-        """
-        if self.cover_image and not self.cover_thumbnail:
-            self.cover_thumbnail = self.make_thumbnail(self.cover_image)
-        
-        super().save(*args, **kwargs)
+    # ==========================================
+    # CACHED CLASS METHODS
+    # ==========================================
     
-    def make_thumbnail(self, image, size=(200, 300)):
-        """
-        Thumbnail yaratish
-        """
-        img = Image.open(image)
+    @classmethod
+    def get_cached(cls, book_id):
+        """Bitta kitobni cache bilan olish"""
+        cache_key = f'book:optimized:{book_id}'
+        book = cache.get(cache_key)
         
-        # RGB ga o'tkazish
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
+        if book is None:
+            book = cls.objects.select_related('author').prefetch_related('genres').get(id=book_id)
+            cache.set(cache_key, book, timeout=300)
         
-        # Thumbnail
-        img.thumbnail(size, Image.Resampling.LANCZOS)
-        
-        # BytesIO ga saqlash
-        thumb_io = BytesIO()
-        img.save(thumb_io, format='JPEG', quality=85)
-        thumb_io.seek(0)
-        
-        # Fayl nomi
-        name, ext = os.path.splitext(image.name)
-        thumb_filename = f'{name}_thumb.jpg'
-        
-        # InMemoryUploadedFile
-        thumbnail = InMemoryUploadedFile(
-            thumb_io,
-            None,
-            thumb_filename,
-            'image/jpeg',
-            thumb_io.tell(),
-            None
-        )
-        
-        return thumbnail
+        return book
     
+    @classmethod
+    def get_all_cached(cls):
+        """Barcha kitoblarni cache bilan olish"""
+        cache_key = 'books:all:optimized'
+        books = cache.get(cache_key)
+        
+        if books is None:
+            books = list(cls.objects.select_related('author').prefetch_related('genres').all())
+            cache.set(cache_key, books, timeout=600)
+        
+        return books
+    
+    @classmethod
+    def get_by_author_cached(cls, author_id):
+        """Muallif bo'yicha kitoblarni cache bilan olish"""
+        cache_key = f'books:author:optimized:{author_id}'
+        books = cache.get(cache_key)
+        
+        if books is None:
+            books = list(
+                cls.objects.filter(author_id=author_id)
+                .select_related('author')
+                .prefetch_related('genres')
+            )
+            cache.set(cache_key, books, timeout=300)
+        
+        return books
+
+
+# ==========================================
+# SIGNAL HANDLERS
+# ==========================================
+
+@receiver(post_save, sender=Book)
+def invalidate_book_cache_on_save(sender, instance, created, **kwargs):
+    """Book save qilinganda cache'ni tozalash"""
+    cache.delete(f'book:optimized:{instance.id}')
+    cache.delete('books:all:optimized')
+    
+    if hasattr(instance, 'author') and instance.author:
+        cache.delete(f'books:author:optimized:{instance.author.id}')
+    
+    try:
+        from django_redis import get_redis_connection
+        redis_conn = get_redis_connection("default")
+        
+        patterns = [
+            'books:list:optimized:*',
+            'books:page:optimized:*',
+            'books:statistics:optimized',
+            'books:search:optimized:*'
+        ]
+        
+        for pattern in patterns:
+            keys = redis_conn.keys(pattern)
+            if keys:
+                redis_conn.delete(*keys)
+    except:
+        pass
+
+
+@receiver(post_delete, sender=Book)
+def invalidate_book_cache_on_delete(sender, instance, **kwargs):
+    """Book delete qilinganda cache'ni tozalash"""
+    cache.delete(f'book:optimized:{instance.id}')
+    cache.delete('books:all:optimized')
+    
+    if hasattr(instance, 'author') and instance.author:
+        cache.delete(f'books:author:optimized:{instance.author.id}')
+    
+    try:
+        from django_redis import get_redis_connection
+        redis_conn = get_redis_connection("default")
+        
+        patterns = ['books:list:optimized:*', 'books:page:optimized:*']
+        for pattern in patterns:
+            keys = redis_conn.keys(pattern)
+            if keys:
+                redis_conn.delete(*keys)
+    except:
+        pass
+
 # ==================== YANGI MODEL 20-Throttling ====================
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='books_profile')
@@ -207,19 +249,6 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.membership_type}"
-    
-    def __str__(self):
-        return f"{self.user.username}'s profile"
-    
-    def save(self, *args, **kwargs):
-        """
-        Avatar yuklanganda thumbnail yaratish
-        """
-        if self.avatar and not self.avatar_thumbnail:
-            # Thumbnail yaratish (Book.make_thumbnail dan nusxalash)
-            self.avatar_thumbnail = self.make_thumbnail(self.avatar, size=(150, 150))
-        
-        super().save(*args, **kwargs)
     
     def save(self, *args, **kwargs):
         """
