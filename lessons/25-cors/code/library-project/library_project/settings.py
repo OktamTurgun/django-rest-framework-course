@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'allauth.account',
     "allauth.socialaccount",
     'dj_rest_auth.registration',
+    "corsheaders",
     "django_filters",
     "debug_toolbar",
 
@@ -111,6 +112,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -255,3 +257,96 @@ CACHES = {
 # Session cache
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
+
+
+# CORS CONFIGURATION 
+# Debug mode
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# CORS Settings
+if DEBUG:
+    # ========================================
+    # DEVELOPMENT SETTINGS
+    # ========================================
+    print("Development mode: CORS_ALLOW_ALL_ORIGINS = True")
+    
+    # Barcha origin'larni ruxsat berish (development only!)
+    CORS_ALLOW_ALL_ORIGINS = True
+    
+    # Credentials support
+    CORS_ALLOW_CREDENTIALS = True
+    
+else:
+    # ========================================
+    # PRODUCTION SETTINGS
+    # ========================================
+    print("Production mode: Using CORS_ALLOWED_ORIGINS")
+    
+    # Environment variable'dan o'qish
+    cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
+    
+    if cors_origins_str:
+        CORS_ALLOWED_ORIGINS = [
+            origin.strip() 
+            for origin in cors_origins_str.split(',') 
+            if origin.strip()
+        ]
+    else:
+        # Default production origins
+        CORS_ALLOWED_ORIGINS = [
+            "https://yourdomain.com",
+            "https://www.yourdomain.com",
+            "https://app.yourdomain.com",
+        ]
+    
+    # Credentials
+    CORS_ALLOW_CREDENTIALS = True
+
+
+# ==========================================
+# CORS - Common Settings (Dev va Prod uchun)
+# ==========================================
+
+# Ruxsat berilgan HTTP methodlar
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Ruxsat berilgan request headerlar
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Frontend'da ko'rinadigan response headerlar
+CORS_EXPOSE_HEADERS = [
+    'Content-Length',
+    'X-Total-Count',
+    'X-Page-Number',
+]
+
+# Preflight response cache duration (24 soat)
+CORS_PREFLIGHT_MAX_AGE = 86400
+
+
+# ==========================================
+# OPTIONAL: Localhost regex pattern (dev uchun)
+# ==========================================
+
+# Agar specific localhost portlari kerak bo'lsa:
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"^http://localhost:\d+$",       # localhost:any_port
+#     r"^http://127\.0\.0\.1:\d+$",    # 127.0.0.1:any_port
+# ]
