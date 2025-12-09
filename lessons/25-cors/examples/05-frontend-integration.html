@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Testing - Library API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .config {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .config h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .config-item {
+            margin: 10px 0;
+        }
+
+        .config-item label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .config-item input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        button.success {
+            background: #27ae60;
+        }
+
+        button.success:hover {
+            background: #229954;
+        }
+
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        pre {
+            background: #2d3436;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 18px;
+            padding: 20px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .cors-headers {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .cors-headers h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .header-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: white;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        .header-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .header-value {
+            color: #666;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CORS Testing - Library API</h1>
+        <p class="subtitle">Test Django REST Framework API with different CORS scenarios</p>
+
+        <!-- Configuration -->
+        <div class="config">
+            <h3>⚙️ API Configuration</h3>
+            <div class="config-item">
+                <label>API Base URL:</label>
+                <input type="text" id="apiUrl" value="http://localhost:8000/api" />
+            </div>
+            <div class="config-item">
+                <label>Auth Token:</label>
+                <input type="text" id="authToken" placeholder="Bearer token (optional)" />
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <h4>📖 How to Use</h4>
+            <p>
+                1. Make sure Django server is running: <code>python manage.py runserver</code><br>
+                2. Make sure CORS is configured in Django settings<br>
+                3. Open this file in your browser<br>
+                4. Click buttons below to test different requests<br>
+                5. Check console (F12) for detailed logs
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="btn-group">
+            <button onclick="testSimpleGET()">📚 GET Books (Simple)</button>
+            <button onclick="testPOSTWithJSON()">➕ POST Book (JSON)</button>
+            <button onclick="testPUTRequest()">✏️ PUT Book (Update)</button>
+            <button onclick="testDELETERequest()" class="danger">🗑️ DELETE Book</button>
+            <button onclick="testWithAuth()">🔐 GET with Auth</button>
+            <button onclick="testPreflight()">🔍 Test Preflight</button>
+            <button onclick="testCORSHeaders()" class="success">📊 Check CORS Headers</button>
+            <button onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+
+        <!-- Results -->
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Get API URL from input
+        function getApiUrl() {
+            return document.getElementById('apiUrl').value;
+        }
+
+        // Get auth token from input
+        function getAuthToken() {
+            return document.getElementById('authToken').value;
+        }
+
+        // Display result
+        function displayResult(title, data, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const resultHtml = `
+                <div class="result">
+                    <span class="status ${isError ? 'error' : 'success'}">
+                        ${isError ? '❌ ERROR' : '✅ SUCCESS'}
+                    </span>
+                    <h3>${title}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+            resultsDiv.innerHTML = resultHtml + resultsDiv.innerHTML;
+        }
+
+        // Display CORS headers
+        function displayCORSHeaders(response) {
+            const corsHeaders = {
+                'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials'),
+                'Access-Control-Max-Age': response.headers.get('Access-Control-Max-Age'),
+            };
+
+            const headersHtml = Object.entries(corsHeaders)
+                .filter(([key, value]) => value !== null)
+                .map(([key, value]) => `
+                    <div class="header-item">
+                        <span class="header-name">${key}:</span>
+                        <span class="header-value">${value}</span>
+                    </div>
+                `).join('');
+
+            return `
+                <div class="cors-headers">
+                    <h4>🌐 CORS Headers</h4>
+                    ${headersHtml || '<p>No CORS headers found</p>'}
+                </div>
+            `;
+        }
+
+        // Show loading
+        function showLoading(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="loading">⏳ ${message}</div>` + resultsDiv.innerHTML;
+        }
+
+        // Test 1: Simple GET request
+        async function testSimpleGET() {
+            showLoading('Testing simple GET request...');
+            console.log('🔍 Testing Simple GET Request');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/`);
+                const data = await response.json();
+                
+                console.log('✅ Response:', data);
+                console.log('📊 CORS Headers:', {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                });
+
+                displayResult('Simple GET Request', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data,
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('Simple GET Request', {
+                    error: error.message,
+                    details: 'Check if Django server is running and CORS is configured'
+                }, true);
+            }
+        }
+
+        // Test 2: POST with JSON (triggers preflight)
+        async function testPOSTWithJSON() {
+            showLoading('Testing POST with JSON...');
+            console.log('🔍 Testing POST with JSON (Preflight)');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: 'CORS Test Book',
+                        author: 1,
+                        isbn: '1234567890123',
+                        price: 29.99,
+                    })
+                });
+
+                const data = await response.json();
+                console.log('✅ Response:', data);
+
+                displayResult('POST with JSON', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data,
+                    note: 'This request triggered a preflight OPTIONS request',
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('POST with JSON', {
+                    error: error.message,
+                    possibleReasons: [
+                        'CORS not configured for POST',
+                        'Content-Type header not allowed',
+                        'Preflight request failed'
+                    ]
+                }, true);
+            }
+        }
+
+        // Test 3: PUT request
+        async function testPUTRequest() {
+            showLoading('Testing PUT request...');
+            console.log('🔍 Testing PUT Request');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/1/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: 'Updated Book Title',
+                        author: 1,
+                        isbn: '1234567890123',
+                        price: 39.99,
+                    })
+                });
+
+                const data = await response.json();
+                console.log('✅ Response:', data);
+
+                displayResult('PUT Request', {
+                    status: response.status,
+                    data: data,
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('PUT Request', { error: error.message }, true);
+            }
+        }
+
+        // Test 4: DELETE request
+        async function testDELETERequest() {
+            showLoading('Testing DELETE request...');
+            console.log('🔍 Testing DELETE Request');
+
+            const confirmDelete = confirm('This will try to delete book with ID 1. Continue?');
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/1/`, {
+                    method: 'DELETE'
+                });
+
+                console.log('✅ Response status:', response.status);
+
+                displayResult('DELETE Request', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('DELETE Request', { error: error.message }, true);
+            }
+        }
+
+        // Test 5: With Authorization header
+        async function testWithAuth() {
+            showLoading('Testing with Authorization...');
+            console.log('🔍 Testing with Authorization Header');
+
+            const token = getAuthToken() || 'test-token-12345';
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                const data = await response.json();
+                console.log('✅ Response:', data);
+
+                displayResult('GET with Authorization', {
+                    status: response.status,
+                    token: token.substring(0, 20) + '...',
+                    data: data,
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('GET with Authorization', {
+                    error: error.message,
+                    note: 'Authorization header might not be allowed in CORS_ALLOW_HEADERS'
+                }, true);
+            }
+        }
+
+        // Test 6: Preflight simulation
+        async function testPreflight() {
+            showLoading('Testing preflight request...');
+            console.log('🔍 Testing Preflight Request');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'content-type',
+                    },
+                });
+
+                console.log('✅ Preflight Response:', response.status);
+
+                displayResult('Preflight (OPTIONS) Request', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    note: 'This is what browser sends before actual POST/PUT/DELETE',
+                    corsHeaders: displayCORSHeaders(response)
+                });
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('Preflight Request', { error: error.message }, true);
+            }
+        }
+
+        // Test 7: Check all CORS headers
+        async function testCORSHeaders() {
+            showLoading('Checking CORS headers...');
+            console.log('🔍 Checking CORS Headers');
+
+            try {
+                const response = await fetch(`${getApiUrl()}/books/`);
+                
+                const corsInfo = {
+                    'Origin (This page)': window.location.origin,
+                    'API URL': getApiUrl(),
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin') || 'NOT SET',
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods') || 'NOT SET',
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers') || 'NOT SET',
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials') || 'NOT SET',
+                    'Access-Control-Max-Age': response.headers.get('Access-Control-Max-Age') || 'NOT SET',
+                };
+
+                console.table(corsInfo);
+
+                displayResult('CORS Headers Check', corsInfo);
+            } catch (error) {
+                console.error('❌ Error:', error);
+                displayResult('CORS Headers Check', { error: error.message }, true);
+            }
+        }
+
+        // Clear results
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            console.clear();
+            console.log('🧹 Results cleared');
+        }
+
+        // Auto-log page origin
+        console.log('📍 This page origin:', window.location.origin);
+        console.log('🔧 Make sure Django CORS is configured to allow this origin');
+        console.log('');
+        console.log('Example Django settings:');
+        console.log(`CORS_ALLOWED_ORIGINS = ["${window.location.origin}"]`);
+    </script>
+</body>
+</html>
