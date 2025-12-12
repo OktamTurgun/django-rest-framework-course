@@ -290,3 +290,16 @@ class UserProfile(models.Model):
         )
         
         return thumbnail
+class Review(models.Model):
+    book = models.ForeignKey(
+        Book, 
+        on_delete=models.CASCADE,
+        related_name='reviews'  
+    )
+    rating = models.IntegerField()
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Review for {self.book.title} - Rating: {self.rating}'
+    

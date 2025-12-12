@@ -17,6 +17,13 @@ urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
 
+    # API VERSIONING URLS
+    # V1 API (Deprecated)
+    path('api/v1/', include('books.api.v1.urls')),
+    
+    # V2 API (Active)
+    path('api/v2/', include('books.api.v2.urls')),
+
     # API endpoints
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
