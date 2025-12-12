@@ -91,6 +91,20 @@ REST_FRAMEWORK = {
         'monitored_books': '100/hour',
         'search': '50/hour',
     },
+    
+    # ========================================
+    # API VERSIONING CONFIGURATION
+    # ========================================
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',  # ← URLPath emas, Namespace
+    'DEFAULT_VERSION': 'v1',
+    'ALLOWED_VERSIONS': ['v1', 'v2'],
+    'VERSION_PARAM': 'version',
+    
+    # ========================================
+    # PAGINATION (V2 uchun)
+    # ========================================
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
 }
 
 # SPECTACULAR_SETTINGS
@@ -98,7 +112,7 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Library API',
     'DESCRIPTION': 'Complete REST API for Library Management System',
-    'VERSION': '1.0.0',
+    'VERSION': '2.0.0',  # ← 2.0.0 ga o'zgartirdik
     'SERVE_INCLUDE_SCHEMA': False,
     
     'SWAGGER_UI_SETTINGS': {
@@ -109,6 +123,18 @@ SPECTACULAR_SETTINGS = {
     },
     
     'COMPONENT_SPLIT_REQUEST': True,
+    
+    # ========================================
+    # API VERSIONING in Documentation
+    # ========================================
+    'SERVERS': [
+        {'url': 'http://127.0.0.1:8000/api/v1/', 'description': 'V1 API (Deprecated)'},
+        {'url': 'http://127.0.0.1:8000/api/v2/', 'description': 'V2 API (Current)'},
+    ],
+    'TAGS': [
+        {'name': 'v1', 'description': 'Version 1 Endpoints (Deprecated)'},
+        {'name': 'v2', 'description': 'Version 2 Endpoints (Current)'},
+    ],
 }
 
 MIDDLEWARE = [
@@ -123,6 +149,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # allauth uchun middleware
     "allauth.account.middleware.AccountMiddleware",
+    # CUSTOM API VERSIONING MIDDLEWARE
+    'books.middleware.APIVersionDeprecationMiddleware',
+    'books.middleware.APIVersionMetricsMiddleware', 
 ]
 
 # === URLS ===
@@ -350,3 +379,25 @@ CORS_PREFLIGHT_MAX_AGE = 86400
 #     r"^http://localhost:\d+$",       # localhost:any_port
 #     r"^http://127\.0\.0\.1:\d+$",    # 127.0.0.1:any_port
 # ]
+
+# DEPRECATION SETTINGS (faylning oxirida)
+from datetime import datetime
+
+# V1 Sunset Date
+V1_SUNSET_DATE = datetime(2025, 12, 31)  # V1 will be sunset on Dec 31, 2025
+
+# API Version Info
+API_VERSIONS = {
+    'v1': {
+        'status': 'deprecated',
+        'release_date': '2023-01-15',
+        'sunset_date': '2025-12-31',
+        'migration_guide': 'https://docs.example.com/api/v1-to-v2',
+    },
+    'v2': {
+        'status': 'active',
+        'release_date': '2024-01-15',
+        'sunset_date': None,
+        'migration_guide': None,
+    },
+}
