@@ -5,6 +5,53 @@ from datetime import datetime, date
 from django.conf import settings
 from django.core.cache import cache
 
+# ============================================
+# SENTRY USER CONTEXT MIDDLEWARE
+# ============================================
+
+class SentryUserContextMiddleware:
+    """
+    Middleware to automatically set Sentry user context
+    """
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Set user context for Sentry
+        try:
+            import sentry_sdk
+            from django.conf import settings
+            
+            if hasattr(settings, 'SENTRY_DSN') and settings.SENTRY_DSN:
+                if hasattr(request, 'user') and request.user.is_authenticated:
+                    sentry_sdk.set_user({
+                        "id": request.user.id,
+                        "username": request.user.username,
+                        "email": getattr(request.user, 'email', None),
+                    })
+                else:
+                    sentry_sdk.set_user({
+                        "ip_address": request.META.get('REMOTE_ADDR'),
+                    })
+                
+                # Add request context
+                sentry_sdk.set_context("request", {
+                    "url": request.build_absolute_uri(),
+                    "method": request.method,
+                    "query_string": request.META.get('QUERY_STRING', ''),
+                })
+        except ImportError:
+            # Sentry not installed, skip
+            pass
+        except Exception as e:
+            # Log error but don't break the request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Sentry middleware error: {e}")
+        
+        response = self.get_response(request)
+        return response
 
 class APIVersionDeprecationMiddleware:
     """

@@ -20,4 +20,6 @@ urlpatterns = [
     
     # Metrics (Admin only)
     path('metrics/', views.APIMetricsView.as_view(), name='api-metrics'),
+    # Error Testing Endpoint
+    path('test-errors/', views.ErrorTestAPIView.as_view(), name='test-errors'),
 ]
