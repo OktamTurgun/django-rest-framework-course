@@ -30,16 +30,17 @@ Ushbu kurs Django REST Framework (DRF) asoslaridan tortib, murakkab production-r
 ## Kurs statistikasi
 
 ```
-📈 Progress: [███████░░░] 37.5% Complete
+📈 Progress: [██████░░░░] 32% Complete
 
 ✅ Completed: 15 lessons
 🔄 In Progress: Lesson 16
-⏳ Remaining: 25 lessons
-🎯 Total: 40 lessons + 3 projects
+⏳ Remaining: 32 lessons
+🎯 Total: 47 lessons + 3 projects
 
-⏱ Estimated time: 120 hours (3 months)
-💼 Job-ready after: 23 lessons (~70 hours)
-🏆 Professional level: 28 lessons (~85 hours)
+⏱ Estimated time: 140 hours (3.5 months)
+💼 Job-ready after: 38 lessons (~100 hours) - Deployment tugagach
+🏆 Professional level: 42 lessons (~115 hours) - Advanced Topics tugagach
+🌟 Expert level: 47 lessons (~140 hours) - Barcha darslar
 ```
 
 ## 🗂 Repository strukturasi
@@ -61,7 +62,7 @@ Ushbu kurs Django REST Framework (DRF) asoslaridan tortib, murakkab production-r
  ┗ 📄 README.md               # Ushbu fayl
 ```
 
-## 🚀 Tezkor boshlash
+##  Tezkor boshlash
 
 ### Talablar
 
@@ -251,90 +252,157 @@ python manage.py runserver
 
 ---
 
-###  SECTION 7: Deployment (Lessons 29-32)
-**Status:** TODO
+###  SECTION 7: Notifications & Communication (Lessons 29-30)
+**Status:**  TODO
 
-#### 7.1 Environment
-- [ ] [29 - Environment Setup](lessons/29-environment/)
+#### 7.1 Email Notifications
+- [ ] [29 - Email Notifications](lessons/29-email-notifications/)
+  - SMTP configuration
+  - SendGrid integration
+  - Email templates
+  - Async email sending
+
+#### 7.2 SMS & Push Notifications
+- [ ] [30 - SMS & Push Notifications](lessons/30-sms-push-notifications/)
+  - Twilio SMS integration
+  - Firebase Cloud Messaging (FCM)
+  - Push notification strategies
+
+---
+
+###  SECTION 8: Advanced Authentication (Lessons 31-32)
+**Status:**  TODO
+
+#### 8.1 Social Authentication
+- [ ] [31 - OAuth2 & Social Authentication](lessons/31-oauth2-social-auth/)
+  - Google OAuth2
+  - GitHub OAuth
+  - Facebook Login
+  - django-allauth
+
+#### 8.2 Two-Factor Authentication
+- [ ] [32 - Two-Factor Authentication (2FA)](lessons/32-two-factor-auth/)
+  - TOTP (Google Authenticator)
+  - SMS verification
+  - Backup codes
+
+---
+
+###  SECTION 9: Advanced Features (Lessons 33-34)
+**Status:**  TODO
+
+#### 9.1 Advanced Search
+- [ ] [33 - Advanced Search (Elasticsearch)](lessons/33-elasticsearch/)
+  - Elasticsearch setup
+  - django-elasticsearch-dsl
+  - Full-text search
+  - Search suggestions & autocomplete
+
+#### 9.2 Analytics & Reporting
+- [ ] [34 - Analytics & Reporting](lessons/34-analytics-reporting/)
+  - Excel export (openpyxl)
+  - PDF generation (ReportLab)
+  - Dashboard statistics
+  - Aggregation queries
+
+---
+
+###  SECTION 10: Deployment (Lessons 35-38)
+**Status:**  TODO
+
+#### 10.1 Environment
+- [ ] [35 - Environment Setup](lessons/35-environment/)
   - .env files
   - Settings organization
   - Secrets management
 
-#### 7.2 Docker
-- [ ] [30 - Docker](lessons/30-docker/)
+#### 10.2 Docker
+- [ ] [36 - Docker](lessons/36-docker/)
   - Dockerfile
   - docker-compose
   - PostgreSQL + Redis
 
-#### 7.3 Production Deployment
-- [ ] [31 - Deployment](lessons/31-deployment/)
+#### 10.3 Production Deployment
+- [ ] [37 - Deployment](lessons/37-deployment/)
   - Gunicorn
   - Nginx
   - SSL/HTTPS
   - Domain setup
   - Railway/Heroku/AWS
 
-#### 7.4 CI/CD
-- [ ] [32 - CI/CD](lessons/32-cicd/)
+#### 10.4 CI/CD
+- [ ] [38 - CI/CD](lessons/38-cicd/)
   - GitHub Actions
   - Automated testing
   - Automated deployment
 
 ---
 
-###  SECTION 8: Advanced Topics (Lessons 33-36)
-**Status:** TODO
+###  SECTION 11: Advanced Topics (Lessons 39-42)
+**Status:**  TODO
 
-#### 8.1 Real-time
-- [ ] [33 - WebSockets](lessons/33-websockets/)
+#### 11.1 Real-time
+- [ ] [39 - WebSockets](lessons/39-websockets/)
   - Django Channels
   - Real-time notifications
 
-#### 8.2 Background Tasks
-- [ ] [34 - Celery](lessons/34-celery/)
+#### 11.2 Background Tasks
+- [ ] [40 - Celery](lessons/40-celery/)
   - Async tasks
   - Periodic tasks
   - Task queues
 
-#### 8.3 GraphQL (Optional)
-- [ ] [35 - GraphQL](lessons/35-graphql/)
+#### 11.3 GraphQL (Optional)
+- [ ] [41 - GraphQL](lessons/41-graphql/)
   - Graphene-Django
   - Queries & Mutations
 
-#### 8.4 Microservices (Optional)
-- [ ] [36 - Microservices](lessons/36-microservices/)
+#### 11.4 Microservices (Optional)
+- [ ] [42 - Microservices](lessons/42-microservices/)
   - Service architecture
   - API Gateway
 
 ---
 
-### 📖 SECTION 9: Best Practices (Lessons 37-40)
-**Status:** ⏳ TODO
+###  SECTION 12: Best Practices (Lessons 43-46)
+**Status:**  TODO
 
-#### 9.1 Design Patterns
-- [ ] [37 - Design Patterns](lessons/37-design-patterns/)
+#### 12.1 Design Patterns
+- [ ] [43 - Design Patterns](lessons/43-design-patterns/)
   - Repository pattern
   - Service layer
   - Dependency injection
 
-#### 9.2 Code Organization
-- [ ] [38 - Code Organization](lessons/38-code-organization/)
+#### 12.2 Code Organization
+- [ ] [44 - Code Organization](lessons/44-code-organization/)
   - App structure
   - Reusable components
   - Utils & helpers
 
-#### 9.3 Security
-- [ ] [39 - Security Best Practices](lessons/39-security/)
+#### 12.3 Security
+- [ ] [45 - Security Best Practices](lessons/45-security/)
   - SQL injection prevention
   - XSS, CSRF protection
   - Input validation
   - API key management
 
-#### 9.4 Final Project
-- [ ] [40 - Final Project](lessons/40-final-project/)
+#### 12.4 Final Project
+- [ ] [46 - Final Project](lessons/46-final-project/)
   - E-commerce API
   - All concepts combined
   - Production deployment
+
+---
+
+###  SECTION 13: Infrastructure (Lesson 47) - Optional
+**Status:**  TODO
+
+#### 13.1 Kubernetes
+- [ ] [47 - Kubernetes Basics](lessons/47-kubernetes/)
+  - Kubernetes concepts
+  - Deployment configuration
+  - Helm charts
+  - Scaling strategies
 
 ---
 
@@ -519,7 +587,7 @@ Agar kurs foydali bo'lsa:
 - Django Team
 - DRF Community
 - All contributors
-- You for learning! 🎓
+- You for learning! 
 
 ---
 
