@@ -105,6 +105,13 @@ REST_FRAMEWORK = {
     # ========================================
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+
+    # ============================================
+    # EXCEPTION HANDLER CONFIGURATION
+    # ============================================
+
+    # Custom exception handler
+    'EXCEPTION_HANDLER': 'library_project.exception_handler.custom_exception_handler',
 }
 
 # SPECTACULAR_SETTINGS
@@ -152,6 +159,7 @@ MIDDLEWARE = [
     # CUSTOM API VERSIONING MIDDLEWARE
     'books.middleware.APIVersionDeprecationMiddleware',
     'books.middleware.APIVersionMetricsMiddleware', 
+    'books.middleware.SentryUserContextMiddleware',
 ]
 
 # === URLS ===
@@ -290,8 +298,6 @@ SESSION_CACHE_ALIAS = 'default'
 
 # CORS CONFIGURATION 
 # Debug mode
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
 # CORS Settings
 if DEBUG:
     # ========================================
@@ -401,3 +407,252 @@ API_VERSIONS = {
         'migration_guide': None,
     },
 }
+
+# ============================================
+# LOGGING CONFIGURATION
+# ============================================
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    
+    # ========================================
+    # FORMATTERS
+    # ========================================
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'detailed': {
+            'format': '[{levelname}] {asctime} - {name} - {funcName}:{lineno} - {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    
+    # ========================================
+    # FILTERS
+    # ========================================
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+    },
+    
+    # ========================================
+    # HANDLERS
+    # ========================================
+    'handlers': {
+        # Console output (only in DEBUG mode)
+        'console': {
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        
+        # General application log
+        'file_app': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'app.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        
+        # Error log (ERROR and CRITICAL only)
+        'file_errors': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'errors.log',
+            'maxBytes': 1024 * 1024 * 15,  # 15MB
+            'backupCount': 10,
+            'formatter': 'detailed',
+        },
+        
+        # API request/response log
+        'file_api': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'api.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        
+        # Daily rotating log
+        'file_daily': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': LOGS_DIR / 'daily.log',
+            'when': 'midnight',
+            'interval': 1,
+            'backupCount': 30,  # Keep 30 days
+            'formatter': 'verbose',
+        },
+        
+        # Email for critical errors (Production only)
+        'mail_admins': {
+            'level': 'CRITICAL',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler',
+            'formatter': 'detailed',
+        },
+    },
+    
+    # ========================================
+    # LOGGERS
+    # ========================================
+    'loggers': {
+        # Django core logging
+        'django': {
+            'handlers': ['console', 'file_app', 'file_errors'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        
+        # Django request logging (errors only)
+        'django.request': {
+            'handlers': ['file_errors', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        
+        # Django database queries (DEBUG only)
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        
+        # Books app logging
+        'books': {
+            'handlers': ['console', 'file_api', 'file_errors'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        
+        # Accounts app logging
+        'accounts': {
+            'handlers': ['console', 'file_api', 'file_errors'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        
+        # Custom exception handler logging
+        'library_project.exception_handler': {
+            'handlers': ['console', 'file_errors'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    
+    # ========================================
+    # ROOT LOGGER (fallback)
+    # ========================================
+    'root': {
+        'handlers': ['console', 'file_app', 'file_errors'],
+        'level': 'INFO',
+    },
+}
+
+# ============================================
+# SENTRY CONFIGURATION (Error Tracking)
+# ============================================
+
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+import logging
+
+
+# STEP 1: Define function FIRST (before using it)
+def sentry_before_send(event, hint):
+    """
+    Filter sensitive data before sending to Sentry
+    """
+    # Remove password from request data
+    if 'request' in event and 'data' in event['request']:
+        data = event['request']['data']
+        if isinstance(data, dict):
+            # Filter password fields
+            sensitive_fields = ['password', 'token', 'api_key', 'secret']
+            for field in sensitive_fields:
+                if field in data:
+                    data[field] = '[Filtered]'
+    
+    # Remove sensitive headers
+    if 'headers' in event.get('request', {}):
+        headers = event['request']['headers']
+        sensitive_headers = ['Authorization', 'Cookie', 'X-API-Key']
+        for header in sensitive_headers:
+            if header in headers:
+                headers[header] = '[Filtered]'
+    
+    return event
+
+
+# STEP 2: Now use the function (it's defined above)
+SENTRY_DSN = config('SENTRY_DSN', default=None)
+
+if SENTRY_DSN:
+    # Logging integration
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,        # Capture info and above as breadcrumbs
+        event_level=logging.ERROR  # Send errors as events
+    )
+    
+    # Initialize Sentry
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        
+        # Integrations
+        integrations=[
+            DjangoIntegration(),
+            sentry_logging,
+        ],
+        
+        # Performance monitoring
+        traces_sample_rate=1.0 if DEBUG else 0.1,  # 100% in dev, 10% in prod
+        
+        # Profiling
+        profiles_sample_rate=1.0 if DEBUG else 0.1,
+        
+        # Send user PII (Personal Identifiable Information)
+        send_default_pii=True,
+        
+        # Environment
+        environment=config('ENVIRONMENT', default='development'),
+        
+        # Release tracking
+        release=config('RELEASE_VERSION', default='dev'),
+        
+        # Before send hook (NOW it works because function is defined above!)
+        before_send=sentry_before_send,
+        
+        # Ignore specific errors
+        ignore_errors=[
+            KeyboardInterrupt,
+            BrokenPipeError,
+        ],
+    )
+    
+    print(f"✓ Sentry initialized (Environment: {config('ENVIRONMENT', default='development')})")
+else:
+    print("⚠ Sentry DSN not configured. Error tracking disabled.")

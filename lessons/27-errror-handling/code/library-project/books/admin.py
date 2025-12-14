@@ -9,7 +9,7 @@ from books.models import Book, Author, Genre, UserProfile
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
     """Author admin interface"""
-    list_display = ['name', 'email', 'birth_date', 'created_at']
+    list_display = ['id', 'name', 'email', 'birth_date', 'created_at']
     search_fields = ['name', 'email']
     list_filter = ['created_at']
     date_hierarchy = 'created_at'
