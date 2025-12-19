@@ -9,12 +9,22 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete
 
+
+# ============================================================================
+# AUTHOR MODEL - UPDATED with statistics fields
+# ============================================================================
+
 class Author(models.Model):
-    """Muallif modeli"""
+    """Muallif modeli - updated for Lesson 28"""
     name = models.CharField(max_length=100)
-    bio = models.TextField()
-    birth_date = models.DateField()
-    email = models.EmailField(unique=True)
+    bio = models.TextField(blank=True)  # Made optional
+    birth_date = models.DateField(null=True, blank=True)  # Made optional
+    email = models.EmailField(unique=True, null=True, blank=True)  # Made optional
+    
+    # NEW: Statistics fields (updated by signals)
+    total_books = models.IntegerField(default=0)
+    available_books = models.IntegerField(default=0)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -26,11 +36,15 @@ class Author(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+
+# ============================================================================
+# GENRE MODEL - Kept as is (same as Category concept)
+# ============================================================================
 
 class Genre(models.Model):
     """Janr modeli"""
-    name = models.CharField(max_length= 50)
+    name = models.CharField(max_length=50)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -43,16 +57,15 @@ class Genre(models.Model):
     def __str__(self):
         return self.name
 
-# ==================== YANGILANGAN MODEL ====================
 
-"""
-Book model - FINAL FIXED VERSION
-Publisher field'i o'chirilgan, faqat Author va Genre bilan ishlaydi
-"""
+# ============================================================================
+# BOOK MODEL - MERGED VERSION
+# ============================================================================
 
 class Book(models.Model):
     """
-    Book model with optimizations
+    Book model - Merged version with all features
+    Combines: caching, optimization, and new fields for Lesson 28
     """
     
     # Basic fields
@@ -60,7 +73,7 @@ class Book(models.Model):
         max_length=200,
         db_index=True
     )
-    isbn_number = models.CharField(
+    isbn_number = models.CharField(  # Keep original field name
         max_length=13,
         unique=True,
         db_index=True
@@ -76,6 +89,9 @@ class Book(models.Model):
         db_index=True
     )
     stock = models.IntegerField(default=0)
+    
+    # NEW: Availability flag (for Lesson 28)
+    is_available = models.BooleanField(default=True)
     
     # Dates
     published_date = models.DateField(
@@ -122,7 +138,7 @@ class Book(models.Model):
         return self.title
     
     # ==========================================
-    # CACHED CLASS METHODS
+    # CACHED CLASS METHODS (from Lesson 24)
     # ==========================================
     
     @classmethod
@@ -165,10 +181,99 @@ class Book(models.Model):
         
         return books
 
+# ============================================================================
+# BOOK LOG MODEL - NEW for Lesson 28
+# ============================================================================
 
-# ==========================================
-# SIGNAL HANDLERS
-# ==========================================
+class BookLog(models.Model):
+    """Book operation log"""
+    ACTION_CHOICES = [
+        ('created', 'Created'),
+        ('updated', 'Updated'),
+        ('deleted', 'Deleted'),
+        ('borrowed', 'Borrowed'),
+        ('returned', 'Returned'),
+    ]
+
+    book_title = models.CharField(max_length=255)
+    book_id = models.IntegerField(null=True)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"{self.action.upper()}: {self.book_title} at {self.timestamp}"
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Book Log'
+        verbose_name_plural = 'Book Logs'
+
+
+# ============================================================================
+# BORROW HISTORY MODEL - NEW for Lesson 28
+# ============================================================================
+
+class BorrowHistory(models.Model):
+    """Book borrow/return history"""
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='borrow_history'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='borrow_history'
+    )
+    borrowed_at = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateTimeField()
+    returned_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        status = "Returned" if self.returned_at else "Borrowed"
+        return f"{self.book.title} - {self.user.username} ({status})"
+
+    @property
+    def is_overdue(self):
+        """Check if book is overdue"""
+        if self.returned_at:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.due_date
+
+    class Meta:
+        ordering = ['-borrowed_at']
+        verbose_name = 'Borrow History'
+        verbose_name_plural = 'Borrow Histories'
+
+
+# ============================================================================
+# REVIEW MODEL - Kept as is
+# ============================================================================
+
+class Review(models.Model):
+    """Book review model"""
+    book = models.ForeignKey(
+        Book, 
+        on_delete=models.CASCADE,
+        related_name='reviews'  
+    )
+    rating = models.IntegerField()
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Review for {self.book.title} - Rating: {self.rating}'
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+# ============================================================================
+# SIGNAL HANDLERS - Cache invalidation (from Lesson 24)
+# ============================================================================
 
 @receiver(post_save, sender=Book)
 def invalidate_book_cache_on_save(sender, instance, created, **kwargs):
@@ -218,88 +323,3 @@ def invalidate_book_cache_on_delete(sender, instance, **kwargs):
                 redis_conn.delete(*keys)
     except:
         pass
-
-# ==================== YANGI MODEL 20-Throttling ====================
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='books_profile')
-    bio = models.TextField(blank=True)
-    is_premium = models.BooleanField(default=False)
-    avatar = models.ImageField(
-        upload_to='avatars/',
-        blank=True,
-        null=True
-    )
-
-    avatar_thumbnail = models.ImageField(
-        upload_to='avatars/thumbnails/',
-        blank=True,
-        null=True
-    )
-    membership_type = models.CharField(
-        max_length=20,
-        choices=[
-            ('free', 'Free'),
-            ('basic', 'Basic'),
-            ('premium', 'Premium')
-        ],
-        default='free'
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.membership_type}"
-    
-    def save(self, *args, **kwargs):
-        """
-        Avatar yuklanganda thumbnail yaratish
-        """
-        if self.avatar and not self.avatar_thumbnail:
-            # Thumbnail yaratish (Book.make_thumbnail dan nusxalash)
-            self.avatar_thumbnail = self.make_thumbnail(self.avatar, size=(150, 150))
-        
-        super().save(*args, **kwargs)
-    
-    def make_thumbnail(self, image, size=(150, 150)):
-        img = Image.open(image)
-        
-        # RGB ga o'tkazish
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Thumbnail
-        img.thumbnail(size, Image.Resampling.LANCZOS)
-        
-        # BytesIO ga saqlash
-        thumb_io = BytesIO()
-        img.save(thumb_io, format='JPEG', quality=85)
-        thumb_io.seek(0)
-        
-        # Fayl nomi
-        name, ext = os.path.splitext(image.name)
-        thumb_filename = f'{name}_thumb.jpg'
-        
-        # InMemoryUploadedFile
-        thumbnail = InMemoryUploadedFile(
-            thumb_io,
-            None,
-            thumb_filename,
-            'image/jpeg',
-            thumb_io.tell(),
-            None
-        )
-        
-        return thumbnail
-class Review(models.Model):
-    book = models.ForeignKey(
-        Book, 
-        on_delete=models.CASCADE,
-        related_name='reviews'  
-    )
-    rating = models.IntegerField()
-    comment = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f'Review for {self.book.title} - Rating: {self.rating}'
-    

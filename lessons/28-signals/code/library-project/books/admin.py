@@ -3,7 +3,8 @@ Books Admin - FIXED
 Faqat mavjud fieldlar bilan ishlaydi
 """
 from django.contrib import admin
-from books.models import Book, Author, Genre, UserProfile
+from books.models import Book, Author, Genre
+from accounts.models import Profile
 
 
 @admin.register(Author)
@@ -79,31 +80,21 @@ class BookAdmin(admin.ModelAdmin):
     # Per page
     list_per_page = 50
 
+from accounts.models import Profile
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    """User Profile admin interface"""
-    list_display = ['user', 'membership_type', 'is_premium', 'created_at']
-    list_filter = ['membership_type', 'is_premium', 'created_at']
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = [
+        'user', 'membership_type', 'is_premium',
+        'books_borrowed', 'books_returned', 
+        'subscribed_to_notifications', 'created_at'
+    ]
     search_fields = ['user__username', 'user__email']
-    readonly_fields = ['created_at', 'updated_at']
-    
-    fieldsets = (
-        ('User Info', {
-            'fields': ('user', 'bio')
-        }),
-        ('Membership', {
-            'fields': ('membership_type', 'is_premium')
-        }),
-        ('Avatar', {
-            'fields': ('avatar', 'avatar_thumbnail')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
+    readonly_fields = [
+        'books_borrowed', 'books_returned', 
+        'avatar_thumbnail', 'created_at', 'updated_at'
+    ]
+    list_filter = ['membership_type', 'is_premium', 'subscribed_to_notifications']
 
 # Admin site customization
 admin.site.site_header = "Library Management Admin"
