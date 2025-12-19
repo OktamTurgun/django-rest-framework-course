@@ -48,9 +48,6 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-
-    # Lesson 24 caching URLs
-    path('api/lesson24/', include('books.urls.lesson24_urls')),
 ]
 
 # Development mode configuration
