@@ -12,6 +12,9 @@ from .models import Book, Author, BookLog, BorrowHistory
 # Import Profile from accounts app
 from accounts.models import Profile
 
+# Import EmailService for email notifications
+from emails.services import EmailService
+
 
 # ============================================================================
 # CUSTOM SIGNALS
@@ -290,3 +293,16 @@ def on_books_imported(sender, count, user, **kwargs):
     print(f"   Count: {count} books")
     print(f"   User: {user.username}")
     print(f"   Time: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+# ===========================================================================
+# EMAIL NOTIFICATIONS SIGNAL RECEIVERS
+# ===========================================================================
+
+
+@receiver(book_borrowed)
+def send_borrow_confirmation_email(sender, book, user, due_date, **kwargs):
+    """Send email when book is borrowed"""
+    try:
+        EmailService.send_book_borrowed_email(user, book, due_date)
+    except Exception as e:
+        print(f"❌ Email error: {e}")

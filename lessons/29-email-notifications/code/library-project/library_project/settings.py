@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     # Local apps
     "books.apps.BooksConfig",
     "accounts.apps.AccountsConfig",
+    "emails.apps.EmailsConfig"
 ]
 
 # REST FRAMEWORK SETTINGS
@@ -95,7 +96,7 @@ REST_FRAMEWORK = {
     # ========================================
     # API VERSIONING CONFIGURATION
     # ========================================
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',  # ← URLPath emas, Namespace
+    'DEFAULT_VERSIONING_CLASS': None,  # ← URLPath emas, Namespace
     'DEFAULT_VERSION': 'v1',
     'ALLOWED_VERSIONS': ['v1', 'v2'],
     'VERSION_PARAM': 'version',
@@ -252,31 +253,28 @@ SIMPLE_JWT = {
 }
 
 # === SESSION SETTINGS ===
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400  # 24 hours (seconds)
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_NAME = 'library_sessionid'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False  # Production'da True qiling
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # Development uchun
+# === SITE ID for django-allauth ===
 SITE_ID = 1
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+# === CACHE CONFIGURATION ===
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
     }
-}
-
-INTERNAL_IPS = ['127.0.0.1']
-
-# Redis cache configuration
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-        'OPTIONS': {
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://127.0.0.1:6379/1',
+            'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'PARSER_CLASS': 'redis.connection.HiredisParser',
             'CONNECTION_POOL_KWARGS': {
@@ -288,8 +286,11 @@ CACHES = {
         },
         'KEY_PREFIX': 'library',
         'TIMEOUT': 300,  # 5 daqiqa (default)
+        }
     }
-}
+
+
+INTERNAL_IPS = ['127.0.0.1']
 
 # Session cache
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -386,7 +387,7 @@ CORS_PREFLIGHT_MAX_AGE = 86400
 #     r"^http://127\.0\.0\.1:\d+$",    # 127.0.0.1:any_port
 # ]
 
-# DEPRECATION SETTINGS (faylning oxirida)
+# DEPRECATION SETTINGS AND API VERSIONING
 from datetime import datetime
 
 # V1 Sunset Date
@@ -656,3 +657,32 @@ if SENTRY_DSN:
     print(f"✓ Sentry initialized (Environment: {config('ENVIRONMENT', default='development')})")
 else:
     print("⚠ Sentry DSN not configured. Error tracking disabled.")
+
+# ============================================
+# EMAIL CONFIGURATION
+# ============================================
+
+# Development uchun Console Backend (emaillar terminal'da ko'rinadi)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Production uchun (real email yuborish - keyinroq yoqamiz)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+# Default email settings
+DEFAULT_FROM_EMAIL = 'Library System <noreply@library.com>'
+EMAIL_TIMEOUT = 10
+EMAIL_USE_LOCALTIME = True
+
+# Site URL for email links
+SITE_URL = 'http://localhost:8000'
+
+# Admin emails
+ADMINS = [
+    ('Admin', 'admin@library.com'),
+]
+MANAGERS = ADMINS
