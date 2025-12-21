@@ -27,6 +27,7 @@ urlpatterns = [
     # API endpoints
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
+    path('api/emails/', include('emails.urls')), # New email app URLs
 
     # DRF browsable API login
     path('api-auth/', include(('rest_framework.urls', 'rest_framework'), namespace='rest_framework')),
@@ -62,22 +63,3 @@ if settings.DEBUG:
     # Static & Media files
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-"""
-Endi sizda quyidagi URL pattern'lar bor:
-
-Base URL: http://localhost:8000/api/lesson24/
-
-Endpoints:
-- GET    /api/lesson24/books/                    - Cached list
-- GET    /api/lesson24/books/1/                  - Cached detail
-- GET    /api/lesson24/books/search/?q=django    - Search
-- GET    /api/lesson24/books/statistics/         - Stats
-- GET    /api/lesson24/books/paginated/?page=1   - Pagination
-- POST   /api/lesson24/books/create/             - Create
-- PUT    /api/lesson24/books/1/update/           - Update
-- DELETE /api/lesson24/books/1/delete/           - Delete
-- GET    /api/lesson24/books/public/             - Public list
-- GET    /api/lesson24/cache/stats/              - Cache stats
-- POST   /api/lesson24/cache/clear/              - Clear cache
-"""
