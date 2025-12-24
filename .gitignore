@@ -79,3 +79,16 @@ Thumbs.db
 # Pipenv
 Pipfile
 Pipfile.lock
+
+# Environment variables
+.env
+.env.*
+
+# Firebase credentials  
+firebase-credentials.json
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+
+# Sensitive files
+*.pem
+*.key
