@@ -63,7 +63,8 @@ INSTALLED_APPS = [
     # Local apps
     "books.apps.BooksConfig",
     "accounts.apps.AccountsConfig",
-    "emails.apps.EmailsConfig"
+    "emails.apps.EmailsConfig",
+    "notifications.apps.NotificationsConfig",
 ]
 
 # REST FRAMEWORK SETTINGS
@@ -71,6 +72,7 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
@@ -96,7 +98,7 @@ REST_FRAMEWORK = {
     # ========================================
     # API VERSIONING CONFIGURATION
     # ========================================
-    'DEFAULT_VERSIONING_CLASS': None,  # ← URLPath emas, Namespace
+    'DEFAULT_VERSIONING_CLASS': None,
     'DEFAULT_VERSION': 'v1',
     'ALLOWED_VERSIONS': ['v1', 'v2'],
     'VERSION_PARAM': 'version',
@@ -686,3 +688,33 @@ ADMINS = [
     ('Admin', 'admin@library.com'),
 ]
 MANAGERS = ADMINS
+
+# ============================================
+# FIREBASE PUSH NOTIFICATION (Lesson 30)
+# ============================================
+FIREBASE_CREDENTIALS_PATH = BASE_DIR / config('FIREBASE_CREDENTIALS_PATH', default='firebase-credentials.json')
+
+# ============================================
+# SMS CONFIGURATION (Lesson 30 - MOCK MODE)
+# ============================================
+SMS_BACKEND = config('SMS_BACKEND', default='mock')  # 'mock' yoki 'twilio'
+SMS_ENABLED = config('SMS_ENABLED', default=True, cast=bool)
+
+# Twilio settings (kelajakda kerak bo'lsa)
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
+TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
+
+# ============================================
+# NOTIFICATION SETTINGS (Lesson 30)
+# ============================================
+NOTIFICATION_SETTINGS = {
+    'SMS_ENABLED': SMS_ENABLED,
+    'SMS_BACKEND': SMS_BACKEND,
+    'PUSH_ENABLED': config('PUSH_ENABLED', default=True, cast=bool),
+    'EMAIL_ENABLED': config('EMAIL_ENABLED', default=True, cast=bool),
+    'DEFAULT_COUNTRY_CODE': 'UZ',
+    'RATE_LIMIT_SMS': '10/hour',
+    'RATE_LIMIT_PUSH': '100/hour',
+    'MOCK_MODE': SMS_BACKEND == 'mock',  # Mock mode flag
+}
