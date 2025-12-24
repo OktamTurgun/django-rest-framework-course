@@ -125,10 +125,10 @@ class NotificationManager:
         
         # Push yuborish
         if len(tokens) == 1:
-            result = self.push.send_to_token(tokens[0], title, body, data)
+            result = self.push.send_push(tokens[0], title, body, data)
             recipient = tokens[0]
         else:
-            result = self.push.send_to_multiple_tokens(tokens, title, body, data)
+            result = self.push.send_to_multiple(tokens, title, body, data)
             recipient = f"{len(tokens)} devices"
         
         # Log yaratish
