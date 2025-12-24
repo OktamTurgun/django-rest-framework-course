@@ -85,6 +85,12 @@ class NotificationLog(models.Model):
         verbose_name=_('Yetkazilgan vaqt')
     )
     
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("O'qilgan vaqt")
+    )
+    
     error_message = models.TextField(
         null=True,
         blank=True,
