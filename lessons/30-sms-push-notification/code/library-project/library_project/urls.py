@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
     path('api/emails/', include('emails.urls')), # New email app URLs
+    path("api/notifications/", include("notifications.urls")),
 
     # DRF browsable API login
     path('api-auth/', include(('rest_framework.urls', 'rest_framework'), namespace='rest_framework')),
