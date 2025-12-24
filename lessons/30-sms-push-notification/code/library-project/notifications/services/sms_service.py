@@ -33,9 +33,9 @@ class MockSMSService:
         self.enabled = settings.NOTIFICATION_SETTINGS['SMS_ENABLED']
         
         if self.backend == 'mock':
-            logger.info("📱 SMS Service initialized (MOCK MODE)")
+            logger.info("[SMS] Service initialized (MOCK MODE)")
         else:
-            logger.warning("⚠️ SMS Backend configured but service is MOCK")
+            logger.warning("[SMS] Backend configured but service is MOCK")
     
     def send_sms(self, phone_number: str, message: str, metadata: Dict = None) -> Dict:
         """
