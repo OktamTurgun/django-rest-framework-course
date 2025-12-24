@@ -34,7 +34,7 @@ class FirebasePushService:
         self.mock_mode = settings.NOTIFICATION_SETTINGS.get('MOCK_MODE', False)
         
         if self.mock_mode:
-            logger.info("📱 Push Service initialized (MOCK MODE)")
+            logger.info("[PUSH] Service initialized (MOCK MODE)")
             return
         
         # Real Firebase initialization
@@ -47,12 +47,12 @@ class FirebasePushService:
                 cred_path = settings.FIREBASE_CREDENTIALS_PATH
                 cred = credentials.Certificate(str(cred_path))
                 firebase_admin.initialize_app(cred)
-                logger.info("🔥 Firebase initialized successfully")
+                logger.info("[FIREBASE] Initialized successfully")
             except Exception as e:
                 logger.error(f"Firebase initialization failed: {str(e)}")
                 self.enabled = False
         else:
-            logger.info("🔥 Firebase already initialized")
+            logger.info("[FIREBASE] Already initialized")
     
     def send_push(
         self, 
