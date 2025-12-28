@@ -11,48 +11,89 @@ from drf_spectacular.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView  # ← YANGI
 from accounts.views import LoginView, LogoutView, UserInfoView, ChangePasswordView
 
 urlpatterns = [
-    # Admin panel
+    # ============================================================================
+    # ADMIN PANEL
+    # ============================================================================
     path('admin/', admin.site.urls),
 
-    # API VERSIONING URLS
+    # ============================================================================
+    # API VERSIONING
+    # ============================================================================
     # V1 API (Deprecated)
     path('api/v1/', include('books.api.v1.urls')),
     
     # V2 API (Active)
     path('api/v2/', include('books.api.v2.urls')),
 
-    # API endpoints
+    # ============================================================================
+    # API ENDPOINTS
+    # ============================================================================
     path('api/', include('books.urls')),
     path('api/accounts/', include('accounts.urls')),
-    path('api/emails/', include('emails.urls')), # New email app URLs
+    path('api/emails/', include('emails.urls')),
     path("api/notifications/", include("notifications.urls")),
 
-    # DRF browsable API login
+    # ============================================================================
+    # AUTHENTICATION - DRF Browsable API
+    # ============================================================================
     path('api-auth/', include(('rest_framework.urls', 'rest_framework'), namespace='rest_framework')),
 
-    # dj-rest-auth
+    # ============================================================================
+    # AUTHENTICATION - DJ-REST-AUTH (Standard)
+    # ============================================================================
     path('api/auth/', include('dj_rest_auth.urls')),
     path('api/auth/registration/', include('dj_rest_auth.registration.urls')),
 
-    # Shortcut URLs for testing
+    # ============================================================================
+    # AUTHENTICATION - SOCIAL AUTH (LESSON 31 - YANGI)
+    # ============================================================================
+    
+    # Browser-based Social Auth (allauth)
+    # Bu URLlar browser da redirect qiladi
+    path('accounts/', include('allauth.urls')),
+    
+    # Bu URLs quyidagilarni beradi:
+    # - /accounts/google/login/       → Google login page
+    # - /accounts/google/login/callback/  → Google callback
+    # - /accounts/github/login/       → GitHub login page
+    # - /accounts/github/login/callback/  → GitHub callback
+    # - va boshqalar...
+
+    # ============================================================================
+    # SHORTCUT URLs (for testing)
+    # ============================================================================
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', UserInfoView.as_view(), name='profile'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
 
-    # Default Django auth (HTML)
+    # ============================================================================
+    # DEFAULT DJANGO AUTH (HTML)
+    # ============================================================================
     path('auth/', include(('django.contrib.auth.urls', 'auth'), namespace='auth')),
 
-    # API Documentation
+    # ============================================================================
+    # API DOCUMENTATION
+    # ============================================================================
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    
+    # ============================================================================
+    # SOCIAL AUTH TEST PAGE (YANGI)
+    # ============================================================================
+    path('social-test/', TemplateView.as_view(
+        template_name='social_auth_test.html'
+    ), name='social_test'),
 ]
 
-# Development mode configuration
+# ============================================================================
+# DEVELOPMENT MODE CONFIGURATION
+# ============================================================================
 if settings.DEBUG:
     import debug_toolbar
 

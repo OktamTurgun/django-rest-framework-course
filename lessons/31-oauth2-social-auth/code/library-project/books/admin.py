@@ -80,22 +80,6 @@ class BookAdmin(admin.ModelAdmin):
     # Per page
     list_per_page = 50
 
-from accounts.models import Profile
-
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = [
-        'user', 'membership_type', 'is_premium',
-        'books_borrowed', 'books_returned', 
-        'subscribed_to_notifications', 'created_at'
-    ]
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = [
-        'books_borrowed', 'books_returned', 
-        'avatar_thumbnail', 'created_at', 'updated_at'
-    ]
-    list_filter = ['membership_type', 'is_premium', 'subscribed_to_notifications']
-
 # Admin site customization
 admin.site.site_header = "Library Management Admin"
 admin.site.site_title = "Library Admin Portal"
