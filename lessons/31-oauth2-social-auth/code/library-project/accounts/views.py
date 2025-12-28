@@ -2,36 +2,55 @@
 Accounts app - Authentication views (Class-Based Views)
 """
 
+# Django imports
 from django.shortcuts import render
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login, logout as django_logout
+from django.core.cache import cache
+from django.conf import settings
+from django.db import connection
 
-from rest_framework.authtoken.models import Token
+# REST framework imports
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.authtoken.models import Token
 
-# === IMPORTS FOR HOMEWORK 1: PASSWORD RESET ===
-import secrets
-from django.core.cache import cache
-
-# === IMPORTS FOR HOMEWORK 2: JWT AUTHENTICATION ===
+# Simple JWT imports
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-# === IMPORT FOR HOMEWORK 3: SESSION AUTHENTICATION
-from django.contrib.auth import login as django_login, logout as django_logout
-from rest_framework.authentication import SessionAuthentication
+# dj-rest-auth imports
+from dj_rest_auth.registration.views import SocialLoginView
 
-# === IMPORT FOR HOMEWORK 4: BASIC AUTHENTICATION
-from rest_framework.authentication import BasicAuthentication
+# allauth imports
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from allauth.socialaccount.providers import registry
+from allauth.socialaccount.models import SocialAccount
 
-# === IMPORTS FOR LESSON 14: USER REGISTRATION ===
-from rest_framework.decorators import api_view, permission_classes
-from .serializers import UserRegistrationSerializer, UserSerializer
-from rest_framework.views import APIView
+# Local app imports (serializers)
+from .serializers import (
+    UserRegistrationSerializer,
+    UserSerializer,
+    UserProfileSerializer,
+    UserProfileSerializer,
+    UpdateProfileSerializer,
+    SetPasswordSerializer,
+    SocialAccountSerializer,
+)
 
+# Python standard library imports
+import secrets
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ============================================
 # REGISTER - Ro'yxatdan o'tish
@@ -104,7 +123,6 @@ class RegisterView(APIView):
 # ============================================
 # LOGIN - Tizimga kirish
 # ============================================
-
 class LoginView(APIView):
     """
     Foydalanuvchi login qilish va token olish
@@ -154,7 +172,6 @@ class LoginView(APIView):
 # ============================================
 # LOGOUT - Tizimdan chiqish
 # ============================================
-
 class LogoutView(APIView):
     """
     Foydalanuvchi logout qilish va tokenni o'chirish
@@ -181,7 +198,6 @@ class LogoutView(APIView):
 # ============================================
 # PROFILE - Foydalanuvchi profili
 # ============================================
-
 class UserInfoView(APIView):
     """
     Foydalanuvchi ma'lumotlarini ko'rish
@@ -242,7 +258,6 @@ class UserInfoView(APIView):
 # ============================================
 # PROFILE UPDATE - Profil yangilash
 # ============================================
-
 class ProfileUpdateView(APIView):
     """
     Profil yangilash
@@ -310,7 +325,6 @@ class ProfileUpdateView(APIView):
 # ============================================
 # CHANGE PASSWORD - Parol o'zgartirish
 # ============================================
-
 class ChangePasswordView(APIView):
     """
     Parol o'zgartirish
@@ -536,8 +550,6 @@ class JWTLoginView(TokenObtainPairView):
 # ============================================
 # HOMEWORK 3: SESSION AUTHENTICATION
 # ============================================
-
-
 class SessionLoginView(APIView):
     """
     Session-based login (Cookie bilan)
@@ -620,8 +632,6 @@ class SessionUserInfoView(APIView):
 # ============================================
 # HOMEWORK 4: BASIC AUTHENTICATION
 # ============================================
-
-
 class BasicAuthUserInfoView(APIView):
     """
     Basic Authentication bilan user info
@@ -674,7 +684,6 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .serializers import UserRegistrationSerializer, UserSerializer
-
 
 # ========================================
 # VARIANT 1: FUNCTION-BASED VIEW
@@ -761,3 +770,242 @@ class RegisterUserGenericView(generics.CreateAPIView):
             'user': user_serializer.data,
             'message': 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi (Generic)'
         }, status=status.HTTP_201_CREATED, headers=headers)
+    
+# ============================================================================
+# QUYIDAGI KODLARNI accounts/views.py FAYLINING PASTIGA QO'SHING
+# ============================================================================
+
+"""
+Social Authentication Views (Lesson 31)
+========================================
+"""
+
+
+
+
+# ============================================================================
+# SOCIAL LOGIN VIEWS
+# ============================================================================
+
+class GoogleLoginView(SocialLoginView):
+    """Google OAuth2 login endpoint"""
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = "http://localhost:3000/auth/google/callback"
+    client_class = OAuth2Client
+
+
+class GitHubLoginView(SocialLoginView):
+    """GitHub OAuth login endpoint"""
+    adapter_class = GitHubOAuth2Adapter
+    callback_url = "http://localhost:3000/auth/github/callback"
+    client_class = OAuth2Client
+
+
+# ============================================================================
+# USER PROFILE VIEWS
+# ============================================================================
+
+class CurrentUserProfileView(APIView):
+    """Get/Update current user profile"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get current user profile"""
+        from .serializers import UserProfileSerializer
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+    
+    def patch(self, request):
+        """Update current user profile"""
+        from .serializers import UpdateProfileSerializer, UserProfileSerializer
+        
+        serializer = UpdateProfileSerializer(
+            request.user, 
+            data=request.data, 
+            partial=True
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            profile_serializer = UserProfileSerializer(request.user)
+            return Response(profile_serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SetPasswordView(APIView):
+    """Set password for social auth users"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Set password"""
+        from .serializers import SetPasswordSerializer
+        
+        serializer = SetPasswordSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save(request.user)
+            logger.info(f"✅ Password set for user: {request.user.username}")
+            return Response({"message": "Password set successfully"})
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============================================================================
+# SOCIAL ACCOUNTS MANAGEMENT
+# ============================================================================
+
+class SocialAccountsListView(APIView):
+    """List all connected social accounts"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """List social accounts"""
+        from .serializers import SocialAccountSerializer
+        
+        social_accounts = SocialAccount.objects.filter(user=request.user)
+        serializer = SocialAccountSerializer(social_accounts, many=True)
+        
+        return Response({
+            "social_accounts": serializer.data,
+            "has_password": request.user.has_usable_password(),
+            "total_accounts": social_accounts.count()
+        })
+
+
+class SocialAccountDetailView(APIView):
+    """Get specific social account details"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, provider):
+        """Get social account details"""
+        from .serializers import SocialAccountDetailSerializer
+        
+        try:
+            social_account = SocialAccount.objects.get(
+                user=request.user,
+                provider=provider
+            )
+            serializer = SocialAccountDetailSerializer(social_account)
+            return Response(serializer.data)
+        except SocialAccount.DoesNotExist:
+            return Response(
+                {"error": f"No {provider} account connected"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class DisconnectSocialAccountView(APIView):
+    """Disconnect social account"""
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, provider):
+        """Disconnect social account"""
+        try:
+            social_account = SocialAccount.objects.get(
+                user=request.user,
+                provider=provider
+            )
+            
+            # Security check
+            if not request.user.has_usable_password():
+                other_accounts = SocialAccount.objects.filter(
+                    user=request.user
+                ).exclude(pk=social_account.pk)
+                
+                if not other_accounts.exists():
+                    return Response(
+                        {
+                            "error": "Cannot disconnect last authentication method. "
+                                   "Please set a password first."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            provider_name = provider.capitalize()
+            social_account.delete()
+            
+            return Response({
+                "message": f"{provider_name} account disconnected successfully"
+            })
+        
+        except SocialAccount.DoesNotExist:
+            return Response(
+                {"error": f"No {provider} account connected"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+
+class HealthCheckView(APIView):
+    """Health check endpoint"""
+    permission_classes = []
+
+    def get(self, request):
+        """Health check"""
+        # DB tekshirish
+        try:
+            connection.ensure_connection()
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+
+        social_providers = list(registry.provider_map.keys())
+
+        return Response({
+            "status": "ok" if db_status == "connected" else "error",
+            "database": db_status,
+            "social_providers": social_providers,
+            "timestamp": timezone.now().isoformat(),
+            "version": "1.0.0",
+            "debug": settings.DEBUG,
+        })
+
+
+
+# ============================================================================
+# ADMIN STATISTICS
+# ============================================================================
+
+class SocialAuthStatisticsView(APIView):
+    """Social auth statistics (Admin only)"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get statistics"""
+        if not request.user.is_staff:
+            return Response(
+                {"error": "Admin access required"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        from django.contrib.auth.models import User
+        
+        total_users = User.objects.count()
+        social_users = User.objects.filter(
+            socialaccount__isnull=False
+        ).distinct().count()
+        regular_users = total_users - social_users
+        
+        users_with_password = User.objects.exclude(
+            password__in=['', '!']
+        ).count()
+        users_without_password = total_users - users_with_password
+        
+        provider_stats = {}
+        for provider in ['google', 'github', 'facebook']:
+            count = SocialAccount.objects.filter(provider=provider).count()
+            provider_stats[provider] = count
+        
+        return Response({
+            "total_users": total_users,
+            "social_users": social_users,
+            "regular_users": regular_users,
+            "users_with_password": users_with_password,
+            "users_without_password": users_without_password,
+            "providers": provider_stats,
+            "timestamp": timezone.now().isoformat()
+        })

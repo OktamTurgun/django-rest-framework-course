@@ -1,4 +1,3 @@
-# accounts/models.py
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -23,7 +22,6 @@ class Profile(models.Model):
         related_name='profile'
     )
     
-    # EXISTING FIELDS (keep as is)
     bio = models.TextField(blank=True, default='')
     location = models.CharField(max_length=100, blank=True, default='')
     birth_date = models.DateField(null=True, blank=True)
@@ -43,7 +41,6 @@ class Profile(models.Model):
         default='free'
     )
     
-    # NEW: Avatar fields
     avatar = models.ImageField(
         upload_to='avatars/',
         blank=True,
@@ -59,8 +56,65 @@ class Profile(models.Model):
     books_borrowed = models.IntegerField(default=0)
     books_returned = models.IntegerField(default=0)
     subscribed_to_notifications = models.BooleanField(default=True)
+
+    # ============================================================================
+    # NEW: Social Authentication Fields (Lesson 31)
+    # ============================================================================
     
-    # NEW: Timestamps
+    # Social profile data
+    profile_picture_url = models.URLField(
+        max_length=500, 
+        blank=True, 
+        null=True,
+        help_text="Profile picture from social providers (Google, GitHub)"
+    )
+    company = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        help_text="Company name from GitHub"
+    )
+    website = models.URLField(
+        max_length=200, 
+        blank=True, 
+        null=True,
+        help_text="Personal website"
+    )
+    
+    # GitHub specific
+    github_url = models.URLField(
+        max_length=200, 
+        blank=True, 
+        null=True,
+        help_text="GitHub profile URL"
+    )
+    github_username = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True,
+        help_text="GitHub username"
+    )
+    
+    # Social links
+    linkedin_url = models.URLField(max_length=200, blank=True, null=True)
+    twitter_url = models.URLField(max_length=200, blank=True, null=True)
+    
+    # Preferences
+    language = models.CharField(
+        max_length=10, 
+        default='en',
+        help_text="Preferred language (from Google OAuth)"
+    )
+    timezone = models.CharField(max_length=50, default='UTC')
+    
+    # Verification
+    email_verified = models.BooleanField(
+        default=False,
+        help_text="Email verified (automatically True for social auth)"
+    )
+    phone_verified = models.BooleanField(default=False)
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, null=True)
 
@@ -69,6 +123,57 @@ class Profile(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+    
+    # ============================================================================
+    # Properties (Helper methods)
+    # ============================================================================
+    
+    @property
+    def full_name(self):
+        """Get user's full name"""
+        full = f"{self.user.first_name} {self.user.last_name}".strip()
+        return full if full else self.user.username
+    
+    @property
+    def is_social_authenticated(self):
+        """Check if user has any social authentication"""
+        return self.user.socialaccount_set.exists()
+    
+    @property
+    def social_providers(self):
+        """Get list of connected social providers"""
+        return [acc.provider for acc in self.user.socialaccount_set.all()]
+    
+    @property
+    def display_picture(self):
+        """
+        Get display picture with priority:
+        1. Uploaded avatar (if exists)
+        2. Social profile picture URL (from Google/GitHub)
+        3. Default placeholder
+        """
+        if self.avatar:
+            return self.avatar.url
+        elif self.profile_picture_url:
+            return self.profile_picture_url
+        else:
+            return '/static/images/default-avatar.png'  # Default placeholder
+    
+    @property
+    def has_github(self):
+        """Check if user has GitHub account connected"""
+        return self.user.socialaccount_set.filter(provider='github').exists()
+    
+    @property
+    def has_google(self):
+        """Check if user has Google account connected"""
+        return self.user.socialaccount_set.filter(provider='google').exists()
+    
+    # ============================================================================
+    # Methods
+    # ============================================================================
     
     def save(self, *args, **kwargs):
         """Avatar yuklanganda thumbnail yaratish"""
@@ -110,16 +215,19 @@ class Profile(models.Model):
         except Exception as e:
             print(f"Error creating thumbnail: {e}")
             return None
-
-
-# EXISTING SIGNALS (keep as is)
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
-
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+    
+    def get_social_account_data(self, provider):
+        """
+        Get social account data for specific provider
+        
+        Args:
+            provider (str): 'google' or 'github'
+            
+        Returns:
+            dict: Social account extra_data or None
+        """
+        try:
+            social_account = self.user.socialaccount_set.get(provider=provider)
+            return social_account.extra_data
+        except:
+            return None

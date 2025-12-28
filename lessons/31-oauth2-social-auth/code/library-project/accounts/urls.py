@@ -46,7 +46,7 @@ urlpatterns = [
     path('basic/test/', views.BasicAuthTestView.as_view(), name='basic_auth_test'),
 
     # ========================================
-    #  LESSON 14: New User Registration (with Serializer)
+    # LESSON 14: New User Registration (with Serializer)
     # ========================================
     # Function-based
     path('register/', views.register_user, name='register'),
@@ -56,4 +56,28 @@ urlpatterns = [
     
     # Class-based (Generic)
     path('register-generic/', views.RegisterUserGenericView.as_view(), name='register-generic'),
+    
+    # ========================================
+    # LESSON 31: SOCIAL AUTHENTICATION (NEW)
+    # ========================================
+    
+    # ===== REST API Social Login (for Frontend apps) =====
+    # Bu endpoints Frontend (React, Vue, Flutter) uchun
+    path('auth/social/google/', views.GoogleLoginView.as_view(), name='google_login'),
+    path('auth/social/github/', views.GitHubLoginView.as_view(), name='github_login'),
+    
+    # ===== User Profile Management =====
+    path('users/me/', views.CurrentUserProfileView.as_view(), name='current_user_profile'),
+    path('users/me/set-password/', views.SetPasswordView.as_view(), name='set_password'),
+    
+    # ===== Social Accounts Management =====
+    path('users/me/social/', views.SocialAccountsListView.as_view(), name='social_accounts_list'),
+    path('users/me/social/<str:provider>/', views.SocialAccountDetailView.as_view(), name='social_account_detail'),
+    path('users/me/social/<str:provider>/disconnect/', views.DisconnectSocialAccountView.as_view(), name='disconnect_social'),
+    
+    # ===== Health Check =====
+    path('health/', views.HealthCheckView.as_view(), name='health_check'),
+    
+    # ===== Admin Stats (Optional) =====
+    path('admin/social-stats/', views.SocialAuthStatisticsView.as_view(), name='social_stats'),
 ]
