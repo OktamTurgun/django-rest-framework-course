@@ -10,8 +10,10 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+import logging
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
@@ -56,12 +58,12 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             # Social account ni existing user ga ulash
             sociallogin.connect(request, existing_user)
             
-            print(f"✅ Connected {sociallogin.account.provider} account "
-                  f"to existing user: {existing_user.username}")
+            logger.info(f"✅ Connected {sociallogin.account.provider} account "
+                       f"to existing user: {existing_user.username}")
         
         except User.DoesNotExist:
             # Yangi user yaratiladi
-            print(f"📝 New user will be created with email: {email}")
+            logger.info(f"📝 New user will be created with email: {email}")
     
     def save_user(self, request, sociallogin, form=None):
         """
@@ -86,15 +88,16 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             self._process_github_data(user, data)
         
         # Email verified (social login da email har doim verified)
-        user.email_verified = True
+        if hasattr(user, 'email_verified'):
+            user.email_verified = True
         
         # Bio
-        if not user.bio:
+        if hasattr(user, 'bio') and not user.bio:
             user.bio = f"Registered via {provider.capitalize()}"
         
         user.save()
         
-        print(f"✅ User saved: {user.username} (via {provider})")
+        logger.info(f"✅ User saved: {user.username} (via {provider})")
         return user
     
     def _process_google_data(self, user, data):
@@ -111,7 +114,7 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         - verified_email: Email verified boolean
         """
         # Profile picture
-        if 'picture' in data:
+        if 'picture' in data and hasattr(user, 'profile_picture'):
             user.profile_picture = data['picture']
         
         # Name
@@ -128,11 +131,11 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             user.last_name = data['family_name']
         
         # Locale (language preference)
-        if 'locale' in data:
+        if 'locale' in data and hasattr(user, 'language'):
             user.language = data['locale']
         
-        print(f"  📸 Google profile picture: {user.profile_picture}")
-        print(f"  👤 Name: {user.first_name} {user.last_name}")
+        logger.info(f"  📸 Google profile picture: {data.get('picture', 'N/A')}")
+        logger.info(f"  👤 Name: {user.first_name} {user.last_name}")
     
     def _process_github_data(self, user, data):
         """
@@ -153,7 +156,7 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         - public_repos: Public repositories count
         """
         # Avatar
-        if 'avatar_url' in data:
+        if 'avatar_url' in data and hasattr(user, 'profile_picture'):
             user.profile_picture = data['avatar_url']
         
         # Name
@@ -164,29 +167,29 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
                 user.last_name = parts[1]
         
         # Bio
-        if 'bio' in data and data['bio']:
+        if 'bio' in data and data['bio'] and hasattr(user, 'bio'):
             user.bio = data['bio']
         
         # Location
-        if 'location' in data and data['location']:
+        if 'location' in data and data['location'] and hasattr(user, 'location'):
             user.location = data['location']
         
         # Company
-        if 'company' in data and data['company']:
+        if 'company' in data and data['company'] and hasattr(user, 'company'):
             user.company = data['company']
         
         # GitHub URL
-        if 'html_url' in data:
+        if 'html_url' in data and hasattr(user, 'github_url'):
             user.github_url = data['html_url']
         
         # GitHub username
-        if 'login' in data:
+        if 'login' in data and hasattr(user, 'github_username'):
             user.github_username = data['login']
         
-        print(f"  📸 GitHub avatar: {user.profile_picture}")
-        print(f"  🐙 GitHub: @{user.github_username}")
-        print(f"  🏢 Company: {user.company}")
-        print(f"  📍 Location: {user.location}")
+        logger.info(f"  📸 GitHub avatar: {data.get('avatar_url', 'N/A')}")
+        logger.info(f"  🐙 GitHub: @{data.get('login', 'N/A')}")
+        logger.info(f"  🏢 Company: {data.get('company', 'N/A')}")
+        logger.info(f"  📍 Location: {data.get('location', 'N/A')}")
     
     def populate_user(self, request, sociallogin, data):
         """
@@ -246,30 +249,9 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         
         return email_verified
     
-    def authentication_error(self, request, provider_id, error=None, 
-                           exception=None, extra_context=None):
-        """
-        Autentifikatsiya xatoligida chaqiriladi
-        
-        Bu yerda:
-        - Logging
-        - Custom error handling
-        - User notification
-        """
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        logger.error(
-            f"Social authentication error - "
-            f"Provider: {provider_id}, "
-            f"Error: {error}, "
-            f"Exception: {exception}"
-        )
-        
-        # Parent metodini chaqirish
-        return super().authentication_error(
-            request, provider_id, error, exception, extra_context
-        )
+    # ❌ BU METODINI O'CHIRIB TASHLADIK
+    # DefaultSocialAccountAdapter da authentication_error metodi yo'q!
+    # Agar logging kerak bo'lsa, pre_social_login yoki save_user da qiling
 
 
 class CustomAccountAdapter(DefaultAccountAdapter):
@@ -285,14 +267,15 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         
         # Email verification qilmasdan activate qilish (development)
         user.is_active = True
-        user.email_verified = False
+        if hasattr(user, 'email_verified'):
+            user.email_verified = False
 
         if commit:
             user.save()
         
         # PROFILE bilan ishlash
         profile = getattr(user, 'profile', None)
-        if profile and not profile.bio:
+        if profile and hasattr(profile, 'bio') and not profile.bio:
             profile.bio = "Regular registration"
             profile.save()
         
