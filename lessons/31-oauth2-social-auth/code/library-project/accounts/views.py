@@ -771,17 +771,10 @@ class RegisterUserGenericView(generics.CreateAPIView):
             'message': 'Foydalanuvchi muvaffaqiyatli ro\'yxatdan o\'tdi (Generic)'
         }, status=status.HTTP_201_CREATED, headers=headers)
     
-# ============================================================================
-# QUYIDAGI KODLARNI accounts/views.py FAYLINING PASTIGA QO'SHING
-# ============================================================================
-
 """
 Social Authentication Views (Lesson 31)
 ========================================
 """
-
-
-
 
 # ============================================================================
 # SOCIAL LOGIN VIEWS
