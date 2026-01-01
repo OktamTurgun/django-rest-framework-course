@@ -571,7 +571,7 @@ NOTIFICATION_SETTINGS = {
 # DJANGO-ALLAUTH & SOCIAL AUTH CONFIGURATION
 # ============================================================================
 
-SITE_ID = 3
+SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -609,22 +609,33 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-        "APP": {
-            "client_id": config("GOOGLE_CLIENT_ID", default=""),
-            "secret": config("GOOGLE_CLIENT_SECRET", default=""),
-            "key": "",
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'APP': {
+            'client_id': config('GOOGLE_CLIENT_ID', default=''),
+            'secret': config('GOOGLE_CLIENT_SECRET', default=''),
+            'key': '',
         },
-        "VERIFIED_EMAIL": True,
+        'VERIFIED_EMAIL': True,
     },
-    "github": {
-        "SCOPE": ["user", "user:email", "read:org"],
-        "APP": {
-            "client_id": config("GITHUB_CLIENT_ID", default=""),
-            "secret": config("GITHUB_CLIENT_SECRET", default=""),
+    'github': {
+        # Minimal scope (ko'pincha yetarli)
+        'SCOPE': ['user', 'user:email'],
+        
+        'APP': {
+            'client_id': config('GITHUB_CLIENT_ID', default=''),
+            'secret': config('GITHUB_CLIENT_SECRET', default=''),
         },
+        
+        # GitHub uses space as scope delimiter
+        'SCOPE_DELIMITER': ' ',
+        
+        # OAuth2 settings
+        'OAUTH_PKCE_ENABLED': False,
+        
+        # Verified email
+        'VERIFIED_EMAIL': True,
     },
 }
 

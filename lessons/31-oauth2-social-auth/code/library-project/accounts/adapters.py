@@ -58,12 +58,12 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             # Social account ni existing user ga ulash
             sociallogin.connect(request, existing_user)
             
-            logger.info(f"✅ Connected {sociallogin.account.provider} account "
+            logger.info(f"Connected {sociallogin.account.provider} account "
                        f"to existing user: {existing_user.username}")
         
         except User.DoesNotExist:
             # Yangi user yaratiladi
-            logger.info(f"📝 New user will be created with email: {email}")
+            logger.info(f"New user will be created with email: {email}")
     
     def save_user(self, request, sociallogin, form=None):
         """
@@ -97,7 +97,7 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         
         user.save()
         
-        logger.info(f"✅ User saved: {user.username} (via {provider})")
+        logger.info(f"User saved: {user.username} (via {provider})")
         return user
     
     def _process_google_data(self, user, data):
@@ -134,8 +134,8 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         if 'locale' in data and hasattr(user, 'language'):
             user.language = data['locale']
         
-        logger.info(f"  📸 Google profile picture: {data.get('picture', 'N/A')}")
-        logger.info(f"  👤 Name: {user.first_name} {user.last_name}")
+        logger.info(f"  Google profile picture: {data.get('picture', 'N/A')}")
+        logger.info(f"  Name: {user.first_name} {user.last_name}")
     
     def _process_github_data(self, user, data):
         """
@@ -186,10 +186,10 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         if 'login' in data and hasattr(user, 'github_username'):
             user.github_username = data['login']
         
-        logger.info(f"  📸 GitHub avatar: {data.get('avatar_url', 'N/A')}")
-        logger.info(f"  🐙 GitHub: @{data.get('login', 'N/A')}")
-        logger.info(f"  🏢 Company: {data.get('company', 'N/A')}")
-        logger.info(f"  📍 Location: {data.get('location', 'N/A')}")
+        logger.info(f"  GitHub avatar: {data.get('avatar_url', 'N/A')}")
+        logger.info(f"  GitHub: @{data.get('login', 'N/A')}")
+        logger.info(f"  Company: {data.get('company', 'N/A')}")
+        logger.info(f"  Location: {data.get('location', 'N/A')}")
     
     def populate_user(self, request, sociallogin, data):
         """
