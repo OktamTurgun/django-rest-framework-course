@@ -89,6 +89,9 @@ urlpatterns = [
     path('social-test/', TemplateView.as_view(
         template_name='social_auth_test.html'
     ), name='social_test'),
+
+    # 2FA URLs - YANGI
+    path('api/v1/users/', include('users.urls')),
 ]
 
 # ============================================================================

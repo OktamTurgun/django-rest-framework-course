@@ -52,6 +52,12 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "debug_toolbar",
+
+    # 2FA apps - New (lesson-32)
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'phonenumber_field',
     
     # Authentication apps
     "dj_rest_auth",
@@ -65,6 +71,7 @@ INSTALLED_APPS = [
     # Local apps
     "books.apps.BooksConfig",
     "accounts.apps.AccountsConfig",
+    "users.apps.UsersConfig",
     "emails.apps.EmailsConfig",
     "notifications.apps.NotificationsConfig",
 ]
@@ -82,6 +89,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    'django_otp.middleware.OTPMiddleware',
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
@@ -89,6 +97,14 @@ MIDDLEWARE = [
     "books.middleware.APIVersionMetricsMiddleware",
     "books.middleware.SentryUserContextMiddleware",
 ]
+
+# OTP Settings - YANGI ⬇️
+OTP_TOTP_ISSUER = 'Library Project'
+OTP_LOGIN_URL = '/api/v1/users/2fa/verify/'
+
+# Media files (QR code uchun) - YANGI ⬇️
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # ============================================================================
