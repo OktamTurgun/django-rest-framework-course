@@ -58,6 +58,21 @@ class Profile(models.Model):
     subscribed_to_notifications = models.BooleanField(default=True)
 
     # ============================================================================
+    # NEW: 2FA Fields (Lesson 32) ← QO'SHING!
+    # ============================================================================
+    
+    two_factor_enabled = models.BooleanField(default=False)
+    two_factor_method = models.CharField(
+        max_length=10,
+        choices=[
+            ('totp', 'TOTP'),
+            ('sms', 'SMS'),
+            ('none', 'None')
+        ],
+        default='none'
+    )
+
+    # ============================================================================
     # NEW: Social Authentication Fields (Lesson 31)
     # ============================================================================
     
