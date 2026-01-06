@@ -13,6 +13,7 @@ from .serializers import (
     ReviewSerializer, BulkImportBookSerializer
 )
 from .signals import borrow_book, return_book, books_bulk_imported
+from .search import BookSearch
 
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -84,6 +85,55 @@ class BookViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """
+        Elasticsearch full-text search
+        GET /api/books/search/?q=python&price_min=10&price_max=50&genre=Fiction
+        """
+        query = request.query_params.get('q', '')
+        filters = {
+            'price_min': request.query_params.get('price_min'),
+            'price_max': request.query_params.get('price_max'),
+            'genre': request.query_params.get('genre'),
+            'author': request.query_params.get('author'),
+        }
+        # Remove None values
+        filters = {k: v for k, v in filters.items() if v is not None}
+        
+        search = BookSearch.search_books(query, filters)
+        results = search.execute()
+        
+        return Response({
+            'total': results.hits.total.value,
+            'results': [
+                {
+                    'id': hit.meta.id,
+                    'title': hit.title,
+                    'author': hit.author.name if hasattr(hit, 'author') else None,
+                    'price': hit.price,
+                    'score': hit.meta.score,
+                }
+                for hit in results
+            ]
+        })
+    
+    @action(detail=False, methods=['get'])
+    def autocomplete(self, request):
+        """
+        Autocomplete suggestions
+        GET /api/books/autocomplete/?q=pyth
+        """
+        query = request.query_params.get('q', '')
+        results = BookSearch.autocomplete(query)
+        
+        suggestions = []
+        if hasattr(results, 'suggest') and 'title_suggestions' in results.suggest:
+            for suggestion in results.suggest['title_suggestions'][0]['options']:
+                suggestions.append(suggestion['text'])
+        
+        return Response({'suggestions': suggestions})
 
 
 class UserProfileViewSet(viewsets.ReadOnlyModelViewSet):

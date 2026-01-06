@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "debug_toolbar",
+    "django_elasticsearch_dsl",
 
     # 2FA apps - New (lesson-32)
     'django_otp',
@@ -698,3 +699,11 @@ else:
 # ============================================================================
 
 INTERNAL_IPS = ["127.0.0.1"]
+
+# Elasticsearch Configuration
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'http://localhost:9200',
+        'timeout': 30,
+    },
+}
