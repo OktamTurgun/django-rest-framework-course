@@ -1,0 +1,84 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}Book Return Reminder{% endblock %}
+
+{% block content %}
+<h2>⏰ Book Return Reminder</h2>
+
+<p>Hello {{ user.first_name|default:user.username }},</p>
+
+<p>This is a friendly reminder about your borrowed book that is due soon.</p>
+
+<div class="info-box">
+    <h3>📚 Book Details</h3>
+    <ul>
+        <li><strong>Title:</strong> {{ book.title }}</li>
+        <li><strong>Author:</strong> {{ book.author.name }}</li>
+        <li><strong>ISBN:</strong> {{ book.isbn }}</li>
+    </ul>
+</div>
+
+<div class="info-box">
+    <h3>📅 Return Information</h3>
+    <ul>
+        <li><strong>Due Date:</strong> {{ due_date|date:"F d, Y" }}</li>
+        <li><strong>Days Until Due:</strong> {{ days_until_due }} day{{ days_until_due|pluralize }}</li>
+        {% if is_overdue %}
+        <li style="color: #dc3545;"><strong>Status:</strong> ⚠️ OVERDUE</li>
+        <li style="color: #dc3545;"><strong>Days Overdue:</strong> {{ days_overdue }} day{{ days_overdue|pluralize }}</li>
+        <li style="color: #dc3545;"><strong>Late Fee:</strong> ${{ late_fee }}</li>
+        {% else %}
+        <li style="color: #28a745;"><strong>Status:</strong> ✅ Active</li>
+        {% endif %}
+    </ul>
+</div>
+
+{% if is_overdue %}
+<div class="alert-box" style="background-color: #f8d7da; border-left-color: #dc3545;">
+    <strong style="color: #721c24;">🚨 Action Required - Book Overdue!</strong>
+    <p style="color: #721c24; margin-top: 10px;">
+        Your book is <strong>{{ days_overdue }} day{{ days_overdue|pluralize }}</strong> overdue. 
+        Please return it as soon as possible to avoid additional late fees.
+    </p>
+    <p style="color: #721c24; margin-top: 10px;">
+        <strong>Current Late Fee: ${{ late_fee }}</strong>
+    </p>
+</div>
+{% else %}
+<div class="alert-box">
+    <strong>⏰ Reminder</strong>
+    <p>Your book is due in <strong>{{ days_until_due }} day{{ days_until_due|pluralize }}</strong>. 
+    Please return it on time to avoid late fees of <strong>$1.00 per day</strong>.</p>
+</div>
+{% endif %}
+
+<p><strong>Return Options:</strong></p>
+<ol style="margin-left: 20px; color: #555;">
+    <li><strong>In-Person:</strong> Visit our library during business hours</li>
+    <li><strong>Book Drop:</strong> Use our 24/7 book drop box outside the library</li>
+    <li><strong>Renew:</strong> Extend your loan period (if available)</li>
+</ol>
+
+<div style="text-align: center;">
+    <a href="{{ site_url }}/my-books/" class="button">📖 Manage My Books</a>
+</div>
+
+<div class="divider"></div>
+
+<p><strong>Need to Renew?</strong></p>
+<p style="color: #555;">You can renew your book online if it's not reserved by another member. Visit your account to check renewal eligibility.</p>
+
+<p><strong>Library Hours:</strong></p>
+<ul style="margin-left: 20px; color: #555;">
+    <li><strong>Monday - Friday:</strong> 9:00 AM - 7:00 PM</li>
+    <li><strong>Saturday:</strong> 10:00 AM - 6:00 PM</li>
+    <li><strong>Sunday:</strong> Closed</li>
+</ul>
+
+<p style="margin-top: 30px;">Thank you for being a valued member of our library!</p>
+
+<p>
+    <strong>Best regards,</strong><br>
+    <em>The Library System Team</em>
+</p>
+{% endblock %}
