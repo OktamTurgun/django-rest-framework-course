@@ -92,3 +92,7 @@ serviceAccountKey.json
 # Sensitive files
 *.pem
 *.key
+
+# Reports (generated files)
+*.xlsx
+*.pdf
