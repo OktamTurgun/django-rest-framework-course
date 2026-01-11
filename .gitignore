@@ -13,6 +13,7 @@ venv/
 env/
 ENV/
 .venv
+pipenv/
 
 # Django
 *.log
@@ -22,11 +23,13 @@ db.sqlite3-journal
 /media/
 /static/
 /staticfiles/
+logs/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # IDEs
 .vscode/
@@ -41,6 +44,8 @@ db.sqlite3-journal
 htmlcov/
 .pytest_cache/
 .tox/
+*.cover
+.hypothesis/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -61,6 +66,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Documentation
 docs/_build/
@@ -75,14 +81,11 @@ site/
 # OS specific
 Thumbs.db
 .DS_Store
+Desktop.ini
 
 # Pipenv
 Pipfile
 Pipfile.lock
-
-# Environment variables
-.env
-.env.*
 
 # Firebase credentials  
 firebase-credentials.json
@@ -92,7 +95,30 @@ serviceAccountKey.json
 # Sensitive files
 *.pem
 *.key
+*.crt
+*.cert
 
-# Reports (generated files)
-*.xlsx
-*.pdf
+# AWS credentials
+.aws/
+credentials
+
+# Reports (generated files - Optional)
+# *.xlsx
+# *.pdf
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis dump
+dump.rdb
+
+# Node modules (if using frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Backup files
+*.backup
+*.sql
+*.dump
