@@ -1,0 +1,27 @@
+{% extends 'emails/base_email.html' %}
+
+{% block content %}
+    <h2 style="color: #333;">Book Borrowed Successfully! 📚</h2>
+    
+    <p>Hi {{ user.username }},</p>
+    
+    <p>You have successfully borrowed the following book:</p>
+    
+    <div style="background-color: #f9f9f9; padding: 20px; border-left: 4px solid #4CAF50; margin: 20px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #333;">{{ book.title }}</h3>
+        <p style="margin: 5px 0;"><strong>Author:</strong> {{ book.author.name }}</p>
+        <p style="margin: 5px 0;"><strong>ISBN:</strong> {{ book.isbn_number }}</p>
+        <p style="margin: 5px 0;"><strong>Due Date:</strong> {{ due_date|date:"F d, Y" }}</p>
+    </div>
+    
+    <p><strong>⚠️ Important:</strong> Please return the book by the due date to avoid late fees.</p>
+    
+    <p style="background-color: #fff3cd; padding: 15px; border-radius: 5px;">
+        <strong>💡 Tip:</strong> You can check your borrowed books and due dates anytime in your profile.
+    </p>
+    
+    <p>Happy reading!</p>
+    
+    <p>Best regards,<br>
+    <strong>Library Team</strong></p>
+{% endblock %}
