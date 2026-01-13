@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+</head>
+<body>
+    <h1>Welcome, {{ user.username }}!</h1>
+    <p>Email: {{ user.email }}</p>
+    
+    {% if user.is_authenticated %}
+        <p>✅ You are logged in via Google OAuth</p>
+        <a href="{% url 'account_logout' %}">Logout</a>
+    {% endif %}
+</body>
+</html>
