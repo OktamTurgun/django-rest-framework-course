@@ -13,8 +13,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView  # ← YANGI
 from accounts.views import LoginView, LogoutView, UserInfoView, ChangePasswordView
+from books.health import HealthCheckView
 
 urlpatterns = [
+
+     # ============================================================================
+    # HEALTH CHECK - Production Monitoring
+    # ============================================================================
+    path('health/', HealthCheckView.as_view(), name='health-check'),  # ← YANGI
+    path('api/health/', HealthCheckView.as_view(), name='api-health-check'),  # ← YANGI
     # ============================================================================
     # ADMIN PANEL
     # ============================================================================
