@@ -167,9 +167,18 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {} if "test" in sys.argv else {
 # DEBUG TOOLBAR
 # ============================================================================
 
-INSTALLED_APPS += ["debug_toolbar"]
-MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
-INTERNAL_IPS = ["127.0.0.1"]
+if DEBUG:
+    try:
+        import debug_toolbar
+
+        INSTALLED_APPS += ["debug_toolbar"]
+        MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
+        INTERNAL_IPS = ["127.0.0.1"]
+
+        print("✓ Django Debug Toolbar enabled")
+    except ImportError:
+        print("⚠ debug_toolbar not installed, skipping")
+
 
 
 # ============================================================================
