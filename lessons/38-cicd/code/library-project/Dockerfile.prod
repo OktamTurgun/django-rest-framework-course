@@ -1,0 +1,53 @@
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.11-slim as builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/staticfiles /app/media && \
+    chown -R appuser:appuser /app
+
+WORKDIR /app
+
+COPY --from=builder /app/wheels /wheels
+RUN pip install --no-cache-dir /wheels/* && \
+    rm -rf /wheels
+
+COPY --chown=appuser:appuser . .
+
+USER appuser
+
+RUN python manage.py collectstatic --noinput || true
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "library_project.wsgi:application"]
