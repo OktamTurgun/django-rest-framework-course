@@ -1,0 +1,100 @@
+# =============================================================================
+# Basic Test Workflow
+# =============================================================================
+# Purpose: Run tests on every push and pull request
+# Complexity: Beginner ⭐
+# Features:
+#   - Checkout code
+#   - Setup Python
+#   - Install dependencies
+#   - Run pytest tests
+# =============================================================================
+
+name: Run Tests
+
+# Trigger: When to run this workflow
+on:
+  push:
+    branches: [main, develop]  # Run on push to these branches
+  pull_request:
+    branches: [main]           # Run on PR to main branch
+
+# Jobs: Tasks to execute
+jobs:
+  test:
+    # Run on Ubuntu (Linux)
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Get the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Setup Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'  # Python version to use
+      
+      # Step 3: Display Python version (for debugging)
+      - name: Display Python version
+        run: python --version
+      
+      # Step 4: Upgrade pip
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      
+      # Step 5: Install project dependencies
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django
+      
+      # Step 6: Run tests
+      - name: Run tests
+        run: pytest -v
+      
+      # Step 7: Display test summary
+      - name: Test summary
+        if: always()  # Run even if tests fail
+        run: echo "Tests completed!"
+
+# =============================================================================
+# How to use:
+# =============================================================================
+# 1. Create file: .github/workflows/test.yml
+# 2. Copy this content
+# 3. Commit and push:
+#    git add .github/workflows/test.yml
+#    git commit -m "Add basic test workflow"
+#    git push origin main
+# 4. View in GitHub: Actions tab
+#
+# =============================================================================
+# Customization:
+# =============================================================================
+# - Change Python version: python-version: '3.9'
+# - Add more branches: branches: [main, develop, feature/*]
+# - Run specific tests: pytest tests/test_books.py
+#
+# =============================================================================
+# Expected output:
+# =============================================================================
+# ✅ Checkout code - success
+# ✅ Set up Python - success
+# ✅ Install dependencies - success
+# ✅ Run tests - success (if all tests pass)
+# ❌ Run tests - failure (if any test fails)
+#
+# =============================================================================
+# Troubleshooting:
+# =============================================================================
+# Error: "No module named 'pytest'"
+# Solution: Add pytest to requirements.txt or install in workflow
+#
+# Error: "Tests not found"
+# Solution: Check pytest configuration in pytest.ini or setup.cfg
+#
+# Error: "Python 3.11 not found"
+# Solution: Use available version (3.9, 3.10) or update setup-python action
+# =============================================================================

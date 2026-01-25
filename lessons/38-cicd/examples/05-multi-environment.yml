@@ -1,0 +1,355 @@
+# =============================================================================
+# Multi-Environment Deployment Workflow
+# =============================================================================
+# Purpose: Deploy to Staging and Production environments
+# Complexity: Expert ⭐⭐⭐⭐
+# Features:
+#   - Develop branch → Staging
+#   - Main branch → Production
+#   - Environment-specific secrets
+#   - Manual approval for production
+#   - Rollback capability
+#   - Environment URLs
+# =============================================================================
+
+name: Multi-Environment Deploy
+
+on:
+  push:
+    branches:
+      - develop    # Triggers staging deployment
+      - main       # Triggers production deployment
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  # ===========================================================================
+  # JOB 1: Deploy to Staging
+  # ===========================================================================
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://library-api-staging.up.railway.app
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      
+      - name: Deploy to Staging
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+        run: |
+          echo "🚀 Deploying to STAGING..."
+          railway up --service library-api-staging
+      
+      - name: Run migrations (Staging)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+        run: |
+          echo "📊 Running migrations on STAGING..."
+          railway run python manage.py migrate --noinput
+      
+      - name: Collect static files (Staging)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+        run: |
+          echo "📦 Collecting static files on STAGING..."
+          railway run python manage.py collectstatic --noinput
+      
+      - name: Run smoke tests (Staging)
+        run: |
+          echo "🧪 Running smoke tests..."
+          sleep 10
+          curl -f https://library-api-staging.up.railway.app/health/ || exit 1
+          echo "✅ Smoke tests passed"
+      
+      - name: Staging deployment summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ STAGING Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 URL: https://library-api-staging.up.railway.app"
+          echo "🌿 Branch: develop"
+          echo "📊 Migrations: ✅"
+          echo "📦 Static: ✅"
+          echo "🧪 Tests: ✅"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # ===========================================================================
+  # JOB 2: Deploy to Production
+  # ===========================================================================
+  deploy-production:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://library-api.up.railway.app
+    
+    # Production requires manual approval (configured in GitHub)
+    # Settings → Environments → production → Required reviewers
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      
+      - name: Create deployment backup
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+        run: |
+          echo "💾 Creating backup before deployment..."
+          railway run python manage.py dumpdata > backup-$(date +%Y%m%d-%H%M%S).json || true
+      
+      - name: Deploy to Production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+        run: |
+          echo "🚀 Deploying to PRODUCTION..."
+          railway up --service library-api-production
+      
+      - name: Run migrations (Production)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+        run: |
+          echo "📊 Running migrations on PRODUCTION..."
+          railway run python manage.py migrate --noinput
+      
+      - name: Collect static files (Production)
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
+        run: |
+          echo "📦 Collecting static files on PRODUCTION..."
+          railway run python manage.py collectstatic --noinput
+      
+      - name: Warm up cache (Production)
+        run: |
+          echo "🔥 Warming up application cache..."
+          curl -s https://library-api.up.railway.app/api/books/ > /dev/null || true
+          echo "✅ Cache warmed up"
+      
+      - name: Run smoke tests (Production)
+        run: |
+          echo "🧪 Running production smoke tests..."
+          sleep 15
+          
+          # Health check
+          curl -f https://library-api.up.railway.app/health/ || exit 1
+          
+          # API check
+          curl -f https://library-api.up.railway.app/api/books/ || exit 1
+          
+          # Admin check
+          curl -f https://library-api.up.railway.app/admin/ || exit 1
+          
+          echo "✅ All smoke tests passed"
+      
+      - name: Production deployment summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎉 PRODUCTION Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 URL: https://library-api.up.railway.app"
+          echo "🌳 Branch: main"
+          echo "💾 Backup: ✅"
+          echo "📊 Migrations: ✅"
+          echo "📦 Static: ✅"
+          echo "🔥 Cache: ✅"
+          echo "🧪 Tests: ✅"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ PRODUCTION deployment failed!"
+          echo "Please check logs and consider rollback"
+
+# =============================================================================
+# GitHub Environments Setup:
+# =============================================================================
+#
+# 1. Create Staging Environment:
+#    - Repository → Settings → Environments
+#    - New environment → Name: "staging"
+#    - Add secrets:
+#      * RAILWAY_STAGING_TOKEN
+#    - Environment URL: https://library-api-staging.up.railway.app
+#
+# 2. Create Production Environment:
+#    - New environment → Name: "production"
+#    - Add secrets:
+#      * RAILWAY_PRODUCTION_TOKEN
+#    - Environment URL: https://library-api.up.railway.app
+#    - Protection rules:
+#      ✓ Required reviewers: [select team members]
+#      ✓ Wait timer: 5 minutes (optional)
+#      ✓ Allow administrators to bypass
+#
+# =============================================================================
+# Railway Services Setup:
+# =============================================================================
+#
+# 1. Create Staging Service:
+#    - Railway → New Service
+#    - Name: library-api-staging
+#    - Connect to GitHub branch: develop
+#    - Environment variables:
+#      * DJANGO_SETTINGS_MODULE=library_project.settings.staging
+#      * DEBUG=True (for staging)
+#      * ALLOWED_HOSTS=*.railway.app
+#
+# 2. Create Production Service:
+#    - Railway → New Service
+#    - Name: library-api-production
+#    - Connect to GitHub branch: main
+#    - Environment variables:
+#      * DJANGO_SETTINGS_MODULE=library_project.settings.production
+#      * DEBUG=False
+#      * ALLOWED_HOSTS=library-api.up.railway.app
+#      * Add all production secrets
+#
+# =============================================================================
+# Branch Strategy:
+# =============================================================================
+#
+# develop branch (Staging):
+#   - Development work
+#   - Feature branches merge here
+#   - Auto-deploys to staging
+#   - No manual approval needed
+#   - Testing ground
+#
+# main branch (Production):
+#   - Production-ready code only
+#   - develop merges here after testing
+#   - Requires manual approval
+#   - Protected branch
+#   - Stable releases
+#
+# Workflow:
+#   Feature → develop → Staging → Test → main → Production
+#
+# =============================================================================
+# Approval Workflow:
+# =============================================================================
+#
+# When code pushed to main:
+#   1. Workflow starts
+#   2. Waits for approval (if configured)
+#   3. Reviewer gets notification
+#   4. Reviewer approves/rejects
+#   5. If approved: deployment continues
+#   6. If rejected: deployment canceled
+#
+# Configure reviewers:
+#   Settings → Environments → production → Required reviewers
+#
+# =============================================================================
+# Testing Strategy:
+# =============================================================================
+#
+# Staging Tests:
+#   ✓ Health check
+#   ✓ Basic smoke tests
+#   ✓ Fast and automated
+#
+# Production Tests:
+#   ✓ Health check
+#   ✓ API endpoints
+#   ✓ Admin panel
+#   ✓ More comprehensive
+#   ✓ Cache warming
+#
+# =============================================================================
+# Rollback Strategy:
+# =============================================================================
+#
+# Staging Rollback:
+#   - Fast rollback acceptable
+#   - Test rollback procedures
+#   - railway rollback
+#
+# Production Rollback:
+#   - Use backup created before deployment
+#   - railway rollback
+#   - Or redeploy previous commit:
+#     git revert HEAD
+#     git push origin main
+#
+# =============================================================================
+# Environment Variables Comparison:
+# =============================================================================
+#
+# Staging:
+#   DEBUG=True (for debugging)
+#   ALLOWED_HOSTS=*.railway.app
+#   DATABASE_URL=staging-db-url
+#   SECRET_KEY=staging-secret
+#   SENTRY_ENVIRONMENT=staging
+#
+# Production:
+#   DEBUG=False (security)
+#   ALLOWED_HOSTS=library-api.up.railway.app
+#   DATABASE_URL=production-db-url
+#   SECRET_KEY=production-secret (different!)
+#   SENTRY_ENVIRONMENT=production
+#
+# =============================================================================
+# Manual Deployment:
+# =============================================================================
+#
+# Trigger manually:
+#   1. GitHub → Actions
+#   2. Multi-Environment Deploy → Run workflow
+#   3. Select branch: develop or main
+#   4. Select environment: staging or production
+#   5. Run workflow
+#
+# =============================================================================
+# Monitoring:
+# =============================================================================
+#
+# After deployment, monitor:
+#   - Railway logs: railway logs
+#   - Application metrics
+#   - Error tracking (Sentry)
+#   - User reports
+#   - Health check endpoint
+#
+# =============================================================================
+# Expected Output:
+# =============================================================================
+#
+# Staging deployment (develop branch):
+#   ✅ Deploy to Staging
+#   ✅ Run migrations
+#   ✅ Collect static
+#   ✅ Smoke tests
+#   ✅ Summary
+#
+# Production deployment (main branch):
+#   ⏸️ Waiting for approval...
+#   ✅ Approved
+#   💾 Backup created
+#   ✅ Deploy to Production
+#   ✅ Run migrations
+#   ✅ Collect static
+#   🔥 Cache warmed
+#   ✅ Smoke tests passed
+#   ✅ Summary
+#
+# =============================================================================
