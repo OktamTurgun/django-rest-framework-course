@@ -1,0 +1,6 @@
+media/
+staticfiles/
+
+# Reports (generated files)
+*.xlsx
+*.pdf
