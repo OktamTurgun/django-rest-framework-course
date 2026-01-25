@@ -1,0 +1,197 @@
+# =============================================================================
+# Lint and Format Workflow
+# =============================================================================
+# Purpose: Check code quality with Black, Flake8, and isort
+# Complexity: Beginner ⭐
+# Features:
+#   - Black formatting check
+#   - Flake8 linting (PEP8)
+#   - isort import sorting
+#   - Runs on push and PR
+# =============================================================================
+
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # Step 3: Install linting tools
+      - name: Install linting tools
+        run: |
+          pip install black==23.3.0
+          pip install flake8==6.0.0
+          pip install isort==5.12.0
+      
+      # Step 4: Check code formatting with Black
+      - name: Check formatting with Black
+        run: |
+          echo "Checking code formatting..."
+          black --check --verbose .
+      
+      # Step 5: Check import sorting with isort
+      - name: Check import sorting with isort
+        run: |
+          echo "Checking import order..."
+          isort --check-only --diff .
+      
+      # Step 6: Lint with Flake8
+      - name: Lint with Flake8
+        run: |
+          echo "Running Flake8 linter..."
+          flake8 . \
+            --max-line-length=88 \
+            --extend-ignore=E203,W503 \
+            --exclude=.git,__pycache__,migrations,venv \
+            --count \
+            --statistics
+      
+      # Step 7: Summary
+      - name: Linting summary
+        if: success()
+        run: |
+          echo "✅ All code quality checks passed!"
+          echo "- Black formatting: ✅"
+          echo "- Import sorting: ✅"
+          echo "- Flake8 linting: ✅"
+
+# =============================================================================
+# Pre-commit setup (Optional but recommended):
+# =============================================================================
+# Install pre-commit locally to catch issues before push:
+#
+# 1. Install pre-commit:
+#    pip install pre-commit
+#
+# 2. Create .pre-commit-config.yaml:
+#    repos:
+#      - repo: https://github.com/psf/black
+#        rev: 23.3.0
+#        hooks:
+#          - id: black
+#      - repo: https://github.com/pycqa/isort
+#        rev: 5.12.0
+#        hooks:
+#          - id: isort
+#      - repo: https://github.com/pycqa/flake8
+#        rev: 6.0.0
+#        hooks:
+#          - id: flake8
+#
+# 3. Install hooks:
+#    pre-commit install
+#
+# 4. Now formatting checks run automatically before each commit!
+#
+# =============================================================================
+# Configuration files:
+# =============================================================================
+#
+# setup.cfg or pyproject.toml:
+#
+# [flake8]
+# max-line-length = 88
+# extend-ignore = E203, W503
+# exclude =
+#     .git,
+#     __pycache__,
+#     migrations,
+#     venv,
+#     build,
+#     dist
+#
+# [isort]
+# profile = black
+# line_length = 88
+# skip = migrations
+#
+# [tool.black]
+# line-length = 88
+# exclude = '''
+# /(
+#     \.git
+#   | migrations
+#   | venv
+# )/
+# '''
+#
+# =============================================================================
+# How to fix formatting issues:
+# =============================================================================
+#
+# 1. Format with Black:
+#    black .
+#
+# 2. Sort imports with isort:
+#    isort .
+#
+# 3. Check Flake8 errors:
+#    flake8 .
+#
+# 4. Auto-fix some Flake8 issues:
+#    pip install autopep8
+#    autopep8 --in-place --aggressive --aggressive -r .
+#
+# =============================================================================
+# Common Flake8 errors and fixes:
+# =============================================================================
+#
+# E501 - Line too long
+# Fix: Break line or use Black to auto-format
+#
+# E302 - Expected 2 blank lines
+# Fix: Add blank lines between functions/classes
+#
+# F401 - Module imported but unused
+# Fix: Remove unused import or use noqa comment
+#
+# E203 - Whitespace before ':'
+# Fix: Already ignored (Black compatibility)
+#
+# W503 - Line break before binary operator
+# Fix: Already ignored (Black compatibility)
+#
+# =============================================================================
+# Expected output:
+# =============================================================================
+# If all checks pass:
+# ✅ Check formatting with Black - success
+# ✅ Check import sorting - success
+# ✅ Lint with Flake8 - success
+#
+# If formatting needed:
+# ❌ Check formatting with Black - failure
+# Output: "would reformat file.py"
+# Solution: Run `black .` locally and commit
+#
+# =============================================================================
+# Troubleshooting:
+# =============================================================================
+#
+# Error: "would reformat X files"
+# Solution: Run `black .` locally, commit changes
+#
+# Error: "Imports are incorrectly sorted"
+# Solution: Run `isort .` locally, commit changes
+#
+# Error: "E501 line too long"
+# Solution: Break long lines or let Black handle it
+#
+# =============================================================================

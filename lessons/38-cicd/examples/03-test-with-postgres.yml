@@ -1,0 +1,257 @@
+# =============================================================================
+# Test with PostgreSQL Workflow
+# =============================================================================
+# Purpose: Run tests with PostgreSQL database (production-like environment)
+# Complexity: Intermediate ⭐⭐
+# Features:
+#   - PostgreSQL service container
+#   - Health checks
+#   - Database migrations
+#   - Full integration tests
+#   - Code coverage reporting
+# =============================================================================
+
+name: Test with PostgreSQL
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    # PostgreSQL service container
+    services:
+      postgres:
+        # Docker image to use
+        image: postgres:15
+        
+        # Environment variables for PostgreSQL
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        
+        # Map PostgreSQL port
+        ports:
+          - 5432:5432
+        
+        # Health checks (wait for PostgreSQL to be ready)
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    # Environment variables for Django
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+      DJANGO_SETTINGS_MODULE: library_project.settings.test
+      SECRET_KEY: test-secret-key-for-github-actions-only
+      DEBUG: False
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # Step 3: Cache pip dependencies
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov psycopg2-binary
+      
+      # Step 5: Wait for PostgreSQL (extra safety)
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      
+      # Step 6: Run database migrations
+      - name: Run migrations
+        run: |
+          python manage.py migrate --noinput
+          python manage.py check
+      
+      # Step 7: Create test data (optional)
+      - name: Create test data
+        run: |
+          python manage.py shell << EOF
+          from django.contrib.auth import get_user_model
+          User = get_user_model()
+          if not User.objects.filter(username='testuser').exists():
+              User.objects.create_user('testuser', 'test@example.com', 'testpass123')
+              print('Test user created')
+          EOF
+      
+      # Step 8: Run tests with coverage
+      - name: Run tests with coverage
+        run: |
+          pytest \
+            --cov=. \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-report=html \
+            -v \
+            --tb=short
+      
+      # Step 9: Upload coverage to Codecov (optional)
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      # Step 10: Upload coverage HTML report as artifact
+      - name: Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: htmlcov/
+      
+      # Step 11: Display coverage summary
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "📊 Test Coverage Summary"
+          coverage report --skip-empty
+
+# =============================================================================
+# Test settings configuration:
+# =============================================================================
+# Create library_project/settings/test.py:
+#
+# from .base import *
+#
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('POSTGRES_DB', 'test_db'),
+#         'USER': os.getenv('POSTGRES_USER', 'postgres'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres'),
+#         'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+#         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+#     }
+# }
+#
+# # Speed up password hashing in tests
+# PASSWORD_HASHERS = [
+#     'django.contrib.auth.hashers.MD5PasswordHasher',
+# ]
+#
+# # Disable migrations for faster tests (optional)
+# # class DisableMigrations:
+# #     def __contains__(self, item):
+# #         return True
+# #     def __getitem__(self, item):
+# #         return None
+# # MIGRATION_MODULES = DisableMigrations()
+#
+# =============================================================================
+# pytest.ini configuration:
+# =============================================================================
+# Create pytest.ini in project root:
+#
+# [pytest]
+# DJANGO_SETTINGS_MODULE = library_project.settings.test
+# python_files = tests.py test_*.py *_tests.py
+# addopts = 
+#     --strict-markers
+#     --tb=short
+#     --reuse-db
+#     --nomigrations
+#
+# =============================================================================
+# .coveragerc configuration:
+# =============================================================================
+# Create .coveragerc for coverage settings:
+#
+# [run]
+# source = .
+# omit = 
+#     */migrations/*
+#     */tests/*
+#     */venv/*
+#     manage.py
+#     */asgi.py
+#     */wsgi.py
+#
+# [report]
+# exclude_lines =
+#     pragma: no cover
+#     def __repr__
+#     raise AssertionError
+#     raise NotImplementedError
+#     if __name__ == .__main__.:
+#
+# =============================================================================
+# How PostgreSQL service works:
+# =============================================================================
+# 1. GitHub Actions starts PostgreSQL container
+# 2. Container exposes port 5432
+# 3. Health check waits until PostgreSQL is ready
+# 4. Django connects via localhost:5432
+# 5. Tests run against real PostgreSQL database
+# 6. Container destroyed after workflow completes
+#
+# =============================================================================
+# Benefits of PostgreSQL in CI:
+# =============================================================================
+# ✅ Production-like environment
+# ✅ Test database-specific features
+# ✅ Catch PostgreSQL-specific bugs
+# ✅ Test migrations properly
+# ✅ More confidence in deployment
+#
+# =============================================================================
+# Troubleshooting:
+# =============================================================================
+#
+# Error: "could not connect to server"
+# Solution: Wait for health check, use pg_isready
+#
+# Error: "relation does not exist"
+# Solution: Run migrations before tests
+#
+# Error: "database test_db does not exist"
+# Solution: Check POSTGRES_DB in service env
+#
+# Error: "password authentication failed"
+# Solution: Check POSTGRES_PASSWORD matches DATABASE_URL
+#
+# =============================================================================
+# Expected output:
+# =============================================================================
+# ✅ PostgreSQL service starts
+# ✅ Health check passes
+# ✅ Migrations run successfully
+# ✅ Tests pass with real database
+# ✅ Coverage report generated
+# ✅ Artifacts uploaded
+#
+# =============================================================================

@@ -1,0 +1,300 @@
+# =============================================================================
+# Deploy to Railway Workflow
+# =============================================================================
+# Purpose: Automated deployment to Railway on main branch
+# Complexity: Advanced ⭐⭐⭐
+# Features:
+#   - Auto-deploy on main branch merge
+#   - Run database migrations
+#   - Collect static files
+#   - Health check after deployment
+#   - Rollback on failure
+# =============================================================================
+
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]  # Only deploy from main branch
+  workflow_dispatch:   # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Install Railway CLI
+      - name: Install Railway CLI
+        run: |
+          npm install -g @railway/cli
+          railway --version
+      
+      # Step 3: Deploy to Railway
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "🚀 Deploying to Railway..."
+          railway up --service library-api
+          echo "✅ Deployment initiated"
+      
+      # Step 4: Run database migrations
+      - name: Run migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "📊 Running database migrations..."
+          railway run python manage.py migrate --noinput
+          echo "✅ Migrations completed"
+      
+      # Step 5: Collect static files
+      - name: Collect static files
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "📦 Collecting static files..."
+          railway run python manage.py collectstatic --noinput
+          echo "✅ Static files collected"
+      
+      # Step 6: Get deployment URL
+      - name: Get deployment URL
+        id: get-url
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          URL=$(railway status --json | jq -r '.url')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "🌐 Deployment URL: $URL"
+      
+      # Step 7: Health check
+      - name: Health check
+        run: |
+          echo "🏥 Running health check..."
+          sleep 10  # Wait for deployment to stabilize
+          
+          URL="${{ steps.get-url.outputs.url }}"
+          if [ -n "$URL" ]; then
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health/" || echo "000")
+            
+            if [ "$RESPONSE" = "200" ]; then
+              echo "✅ Health check passed (HTTP $RESPONSE)"
+            else
+              echo "❌ Health check failed (HTTP $RESPONSE)"
+              exit 1
+            fi
+          else
+            echo "⚠️ URL not found, skipping health check"
+          fi
+      
+      # Step 8: Deployment summary
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 URL: ${{ steps.get-url.outputs.url }}"
+          echo "📊 Migrations: ✅ Completed"
+          echo "📦 Static files: ✅ Collected"
+          echo "🏥 Health check: ✅ Passed"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # Step 9: Rollback on failure
+      - name: Rollback on failure
+        if: failure()
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "❌ Deployment failed, attempting rollback..."
+          railway rollback || echo "Rollback not available"
+
+# =============================================================================
+# Setup Instructions:
+# =============================================================================
+#
+# 1. Get Railway Token:
+#    - Go to Railway Dashboard
+#    - Settings → Tokens
+#    - Create new token
+#    - Copy token value
+#
+# 2. Add to GitHub Secrets:
+#    - Go to GitHub Repository
+#    - Settings → Secrets and variables → Actions
+#    - New repository secret
+#    - Name: RAILWAY_TOKEN
+#    - Value: [paste token]
+#    - Add secret
+#
+# 3. Configure Railway Service:
+#    - Railway Dashboard → Your Project
+#    - Settings → Service Name
+#    - Set name: library-api (match workflow)
+#
+# 4. Environment Variables on Railway:
+#    - Set all required env vars in Railway Dashboard
+#    - DJANGO_SETTINGS_MODULE=library_project.settings.production
+#    - SECRET_KEY=your-secret-key
+#    - DEBUG=False
+#    - ALLOWED_HOSTS=*.railway.app
+#    - DATABASE_URL (auto-provided by Railway)
+#
+# =============================================================================
+# Railway CLI Commands Reference:
+# =============================================================================
+#
+# Login:
+#   railway login
+#
+# Link project:
+#   railway link
+#
+# Deploy:
+#   railway up
+#
+# Run command:
+#   railway run python manage.py migrate
+#
+# View logs:
+#   railway logs
+#
+# Check status:
+#   railway status
+#
+# List services:
+#   railway service list
+#
+# Rollback:
+#   railway rollback
+#
+# =============================================================================
+# Workflow Triggers:
+# =============================================================================
+#
+# Automatic (on push to main):
+#   git push origin main
+#
+# Manual (workflow_dispatch):
+#   - GitHub → Actions → Deploy to Railway → Run workflow
+#
+# =============================================================================
+# Testing Deployment Locally:
+# =============================================================================
+#
+# 1. Install Railway CLI:
+#    npm install -g @railway/cli
+#
+# 2. Login:
+#    railway login
+#
+# 3. Link to project:
+#    railway link
+#
+# 4. Test deployment:
+#    railway up
+#
+# 5. Test migrations:
+#    railway run python manage.py migrate
+#
+# =============================================================================
+# Monitoring Deployment:
+# =============================================================================
+#
+# GitHub Actions:
+#   - Repository → Actions tab
+#   - Click on workflow run
+#   - View logs in real-time
+#
+# Railway Dashboard:
+#   - Railway → Deployments
+#   - View build logs
+#   - Check deployment status
+#
+# Application Logs:
+#   railway logs
+#   # Or in Railway Dashboard → Logs
+#
+# =============================================================================
+# Rollback Strategy:
+# =============================================================================
+#
+# Automatic rollback on:
+#   - Deployment failure
+#   - Health check failure
+#   - Migration failure
+#
+# Manual rollback:
+#   railway rollback
+#   # Or in Railway Dashboard → Deployments → Rollback
+#
+# =============================================================================
+# Security Best Practices:
+# =============================================================================
+#
+# ✅ Never commit RAILWAY_TOKEN to repository
+# ✅ Use GitHub Secrets for sensitive data
+# ✅ Rotate tokens regularly
+# ✅ Use environment-specific tokens (staging/production)
+# ✅ Limit token permissions if possible
+# ✅ Monitor deployment logs for issues
+#
+# =============================================================================
+# Expected Output:
+# =============================================================================
+#
+# Successful deployment:
+# ✅ Checkout code
+# ✅ Install Railway CLI
+# ✅ Deploy to Railway
+# ✅ Run migrations
+# ✅ Collect static files
+# ✅ Get deployment URL
+# ✅ Health check passed
+# ✅ Deployment summary
+#
+# Failed deployment:
+# ✅ Checkout code
+# ✅ Install Railway CLI
+# ❌ Deploy failed
+# ❌ Rollback initiated
+#
+# =============================================================================
+# Troubleshooting:
+# =============================================================================
+#
+# Error: "RAILWAY_TOKEN not set"
+# Solution: Add RAILWAY_TOKEN to GitHub Secrets
+#
+# Error: "Service not found"
+# Solution: Check service name matches Railway
+#
+# Error: "Health check failed"
+# Solution: Check /health/ endpoint exists and works
+#
+# Error: "Migrations failed"
+# Solution: Check database connection and migration files
+#
+# Error: "Static files failed"
+# Solution: Check STATIC_ROOT and WhiteNoise config
+#
+# =============================================================================
+# Advanced: Deployment with Slack Notification
+# =============================================================================
+#
+# Add this step after deployment:
+#
+# - name: Notify Slack
+#   if: always()
+#   uses: 8398a7/action-slack@v3
+#   with:
+#     status: ${{ job.status }}
+#     text: |
+#       Deployment to Railway: ${{ job.status }}
+#       URL: ${{ steps.get-url.outputs.url }}
+#     webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+#
+# =============================================================================
