@@ -1,0 +1,41 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install linting tools
+        run: |
+          pip install black==23.3.0
+          pip install flake8==6.0.0
+          pip install isort==5.12.0
+      
+      - name: Check formatting with Black
+        run: black --check --verbose .
+      
+      - name: Check import sorting with isort
+        run: isort --check-only --diff .
+      
+      - name: Lint with Flake8
+        run: |
+          flake8 . \
+            --max-line-length=88 \
+            --extend-ignore=E203,W503 \
+            --exclude=.git,__pycache__,migrations,venv \
+            --count \
+            --statistics
